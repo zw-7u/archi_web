@@ -1,0 +1,180 @@
+/* ==========================================
+   首页 · Three.js 粒子场景
+   ========================================== */
+
+   .landing {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--ink-black);
+    transition: opacity 1.5s var(--ease-out);
+  }
+  
+  .landing.dissolving {
+    pointer-events: none;
+  }
+  
+  .landing.gone {
+    display: none;
+  }
+  
+  #landing-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  
+  /* 首页文字内容 */
+  .landing-content {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+  
+  .landing-title {
+    font-family: var(--font-display);
+    font-size: clamp(48px, 8vw, 120px);
+    font-weight: 900;
+    letter-spacing: 0.15em;
+    color: var(--paper-white);
+    display: flex;
+    gap: 0.05em;
+  }
+  
+  .title-char {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(40px);
+    animation: charReveal 0.8s var(--ease-out) forwards;
+    animation-delay: calc(var(--i, 0) * 0.12s + 0.5s);
+    text-shadow:
+      0 0 40px rgba(200, 168, 85, 0.3),
+      0 2px 8px rgba(0, 0, 0, 0.5);
+  }
+  
+  @keyframes charReveal {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .landing-subtitle {
+    font-family: var(--font-body);
+    font-size: clamp(14px, 2vw, 20px);
+    color: var(--ink-faint);
+    letter-spacing: 0.3em;
+    opacity: 0;
+    animation: fadeInUp 1s var(--ease-out) 1.5s forwards;
+  }
+  
+  /* 进入按钮 */
+  .enter-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 36px;
+    background: transparent;
+    border: 1px solid var(--ink-light);
+    color: var(--paper-warm);
+    font-family: var(--font-body);
+    font-size: 16px;
+    letter-spacing: 0.2em;
+    cursor: pointer;
+    opacity: 0;
+    animation: fadeInUp 1s var(--ease-out) 2s forwards;
+    transition: all var(--duration-normal) var(--ease-out);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .enter-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--vermilion);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.5s var(--ease-out);
+    z-index: -1;
+  }
+  
+  .enter-btn:hover {
+    border-color: var(--vermilion);
+    color: var(--paper-white);
+    letter-spacing: 0.35em;
+  }
+  
+  .enter-btn:hover::before {
+    transform: scaleX(1);
+  }
+  
+  .enter-icon {
+    width: 18px;
+    height: 18px;
+    transition: transform var(--duration-normal) var(--ease-out);
+  }
+  
+  .enter-btn:hover .enter-icon {
+    transform: translateX(4px);
+  }
+  
+  /* 消散遮罩 - 水墨晕染 */
+  .dissolve-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(
+      ellipse at center,
+      transparent 0%,
+      rgba(26, 23, 20, 0.3) 30%,
+      rgba(26, 23, 20, 0.8) 60%,
+      var(--ink-black) 100%
+    );
+  }
+  
+  .dissolve-overlay.active {
+    animation: inkDissolve 2.5s var(--ease-in-out) forwards;
+  }
+  
+  @keyframes inkDissolve {
+    0% {
+      opacity: 0;
+      background-size: 200% 200%;
+      background-position: center;
+    }
+    30% {
+      opacity: 0.5;
+    }
+    60% {
+      opacity: 0.85;
+    }
+    100% {
+      opacity: 1;
+      background-size: 100% 100%;
+    }
+  }
+  
+  /* 首页装饰 - 四角印章纹样 */
+  .landing::after {
+    content: '';
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border: 2px solid var(--vermilion);
+    opacity: 0.25;
+    animation: fadeIn 1s 2.5s forwards;
+    opacity: 0;
+  }

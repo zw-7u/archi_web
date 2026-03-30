@@ -1,0 +1,397 @@
+/* ==========================================
+   时辰场景页 · 全屏沉浸式
+   ========================================== */
+
+   .scenes-container {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+  }
+  
+  /* 单个场景 */
+  .scene {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity var(--duration-scene) var(--ease-in-out),
+      visibility var(--duration-scene);
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding-left: 8%;
+  }
+  
+  .scene.active {
+    opacity: 1;
+    visibility: visible;
+    z-index: 1;
+  }
+  
+  .scene.exiting {
+    z-index: 0;
+  }
+  
+  /* 场景背景层 - 放你的插画 */
+  .scene-bg {
+    position: absolute;
+    inset: 0;
+    /* 默认使用渐变色作为占位，你后期替换为插画背景图 */
+    background:
+      radial-gradient(
+        ellipse at 70% 40%,
+        hsla(var(--scene-hue), var(--scene-sat), 25%, 0.6) 0%,
+        transparent 60%
+      ),
+      linear-gradient(
+        180deg,
+        hsla(var(--scene-hue), var(--scene-sat), 8%, 1) 0%,
+        hsla(var(--scene-hue), var(--scene-sat), 5%, 1) 100%
+      );
+    z-index: 0;
+  }
+  
+  /* 如果你要放插画背景图，用这个模式：
+     .scene[data-hour="卯"] .scene-bg {
+       background: url('../assets/scene-mao.jpg') center/cover no-repeat;
+     }
+  */
+  
+  /* 场景内容层 */
+  .scene-content {
+    position: relative;
+    z-index: 2;
+    max-width: 520px;
+    padding: var(--space-xl) 0;
+  }
+  
+  .scene.active .scene-content {
+    animation: sceneContentEnter 1s var(--ease-out) 0.3s both;
+  }
+  
+  @keyframes sceneContentEnter {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* 场景头部：时辰 + 时间 */
+  .scene-header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .scene-time {
+    font-family: var(--font-display);
+    font-size: clamp(16px, 2vw, 20px);
+    color: var(--gold);
+    letter-spacing: 0.3em;
+    position: relative;
+    padding-left: 20px;
+  }
+  
+  .scene-time::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 12px;
+    height: 1px;
+    background: var(--gold);
+    transform: translateY(-50%);
+  }
+  
+  .scene-period {
+    font-size: 13px;
+    color: var(--ink-light);
+    letter-spacing: 0.1em;
+  }
+  
+  /* 场景标题 */
+  .scene-title {
+    font-family: var(--font-display);
+    font-size: clamp(36px, 5vw, 64px);
+    font-weight: 700;
+    color: var(--paper-white);
+    letter-spacing: 0.12em;
+    margin-bottom: 20px;
+    line-height: 1.3;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+  }
+  
+  /* 场景描述 */
+  .scene-desc {
+    font-size: clamp(14px, 1.5vw, 17px);
+    color: var(--ink-faint);
+    line-height: 2;
+    letter-spacing: 0.08em;
+    max-width: 420px;
+  }
+  
+  /* ========== 热区按钮（可点击建筑/物件） ========== */
+  .hotspots {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+  }
+  
+  .hotspot {
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    transform: translate(-50%, -50%);
+    pointer-events: all;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--paper-warm);
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+  
+  .hotspot:hover {
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  
+  .hotspot-pulse {
+    display: block;
+    width: 20px;
+    height: 20px;
+    border: 1.5px solid var(--gold-light);
+    border-radius: 50%;
+    position: relative;
+    animation: breathe 2.5s ease-in-out infinite;
+  }
+  
+  .hotspot-pulse::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border: 1px solid var(--gold-light);
+    border-radius: 50%;
+    opacity: 0.3;
+    animation: pulseRing 2.5s ease-in-out infinite;
+  }
+  
+  @keyframes pulseRing {
+    0%, 100% { transform: scale(0.8); opacity: 0; }
+    50% { transform: scale(1.3); opacity: 0.4; }
+  }
+  
+  .hotspot-label {
+    font-family: var(--font-body);
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: all var(--duration-normal) var(--ease-out);
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8);
+  }
+  
+  .hotspot:hover .hotspot-label {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  /* ========== 场景切换动画 ========== */
+  
+  /* 左滑进入 */
+  .scene.slide-in-left {
+    animation: slideSceneLeft 0.8s var(--ease-out) forwards;
+  }
+  
+  @keyframes slideSceneLeft {
+    from {
+      opacity: 0;
+      transform: translateX(100px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  /* 右滑进入 */
+  .scene.slide-in-right {
+    animation: slideSceneRight 0.8s var(--ease-out) forwards;
+    }
+  
+  @keyframes slideSceneRight {
+    from {
+      opacity: 0;
+      transform: translateX(-100px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  /* 水墨晕开过渡 */
+  .scene.ink-enter {
+    animation: inkSpread 1.2s var(--ease-out) forwards;
+  }
+  
+  /* ========== 水墨晕染过渡层 ========== */
+  .ink-transition {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(
+      ellipse at center,
+      var(--ink-black) 0%,
+      rgba(26, 23, 20, 0.95) 40%,
+      rgba(26, 23, 20, 0.7) 70%,
+      transparent 100%
+    );
+    transition: none;
+  }
+  
+  .ink-transition.active {
+    animation: inkWash 1.2s var(--ease-in-out) forwards;
+  }
+  
+  @keyframes inkWash {
+    0% {
+      opacity: 0;
+      transform: scale(0.3);
+      border-radius: 50%;
+    }
+    40% {
+      opacity: 1;
+      transform: scale(1.5);
+      border-radius: 0%;
+    }
+    60% {
+      opacity: 1;
+      transform: scale(1.5);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(2);
+    }
+  }
+  
+  /* ========== 场景内容视差层 ========== */
+  .scene-parallax {
+    position: absolute;
+    inset: 0;
+    transition: transform 0.15s linear;
+  }
+  
+  /* 场景页右侧装饰竖线 */
+  .scenes-container::after {
+    content: '';
+    position: fixed;
+    right: 40px;
+    top: 15%;
+    height: 70%;
+    width: 1px;
+    background: linear-gradient(
+      180deg,
+      transparent,
+      var(--ink-light) 20%,
+      var(--ink-light) 80%,
+      transparent
+    );
+    opacity: 0.15;
+    z-index: 10;
+    pointer-events: none;
+  }
+  
+  /* 左侧装饰竖线 */
+  .scenes-container::before {
+    content: '';
+    position: fixed;
+    left: 40px;
+    top: 20%;
+    height: 60%;
+    width: 1px;
+    background: linear-gradient(
+      180deg,
+      transparent,
+      var(--ink-medium) 30%,
+      var(--ink-medium) 70%,
+      transparent
+    );
+    opacity: 0.1;
+    z-index: 10;
+    pointer-events: none;
+  }
+  
+  /* ========== 场景背景装饰纹样 ========== */
+  .scene-bg::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border: 1px solid var(--vermilion);
+    opacity: 0.12;
+    pointer-events: none;
+  }
+  
+  .scene-bg::after {
+    content: '';
+    position: absolute;
+    bottom: 100px;
+    right: 60px;
+    width: 1px;
+    height: 80px;
+    background: var(--gold);
+    opacity: 0.1;
+    pointer-events: none;
+  }
+  
+  /* ========== 场景序号装饰 ========== */
+  .scene-content::before {
+    content: attr(data-num);
+    position: absolute;
+    right: -60px;
+    top: 0;
+    font-family: var(--font-display);
+    font-size: 120px;
+    font-weight: 900;
+    color: var(--paper-white);
+    opacity: 0.03;
+    line-height: 1;
+    pointer-events: none;
+  }
+  
+  /* ========== 场景切换方向指示 ========== */
+  .scene-nav-hint {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 15;
+    font-size: 13px;
+    color: var(--ink-light);
+    opacity: 0;
+    transition: opacity 0.5s;
+    pointer-events: none;
+    letter-spacing: 0.2em;
+    writing-mode: vertical-rl;
+  }
+  
+  .scene-nav-hint.left { left: 15px; }
+  .scene-nav-hint.right { right: 15px; }
+  
+  .scenes-container:hover .scene-nav-hint {
+    opacity: 0.25;
+  }

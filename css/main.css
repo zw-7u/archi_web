@@ -1,0 +1,178 @@
+/* ==========================================
+   故宫十二时辰 · 全局样式
+   国风水墨工笔配色体系
+   ========================================== */
+
+   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=ZCOOL+XiaoWei&display=swap');
+
+   :root {
+     /* 国风配色 */
+     --ink-black: #1a1714;
+     --ink-dark: #2c2820;
+     --ink-medium: #4a4236;
+     --ink-light: #7a6e5d;
+     --ink-faint: #b8a98e;
+   
+     --paper-white: #f5f0e8;
+     --paper-warm: #efe8db;
+     --paper-aged: #e8dcc8;
+     --paper-dark: #d4c4a8;
+   
+     --vermilion: #c03c20;
+     --vermilion-light: #d4624a;
+     --vermilion-dark: #8b2c18;
+   
+     --gold: #c8a855;
+     --gold-light: #dcc475;
+     --gold-dark: #8a7438;
+   
+     --jade: #5a8a6a;
+     --jade-light: #7aaa8a;
+     --jade-dark: #3a6a4a;
+   
+     --indigo: #3a4a6a;
+     --indigo-light: #5a6a8a;
+     --indigo-dark: #2a3a5a;
+   
+     --celadon: #a8c4a0;
+     --ochre: #c89848;
+   
+     /* 字体 */
+     --font-display: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+     --font-body: 'Noto Serif SC', 'SimSun', serif;
+     --font-mono: 'Courier New', monospace;
+   
+     /* 间距 */
+     --space-xs: 4px;
+     --space-sm: 8px;
+     --space-md: 16px;
+     --space-lg: 32px;
+     --space-xl: 64px;
+   
+     /* 过渡 */
+     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+     --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+     --duration-fast: 0.2s;
+     --duration-normal: 0.4s;
+     --duration-slow: 0.8s;
+     --duration-scene: 1.2s;
+   }
+   
+   /* Reset */
+   *, *::before, *::after {
+     margin: 0;
+     padding: 0;
+     box-sizing: border-box;
+   }
+   
+   html {
+     font-size: 16px;
+     scroll-behavior: smooth;
+     overflow: hidden;
+     height: 100%;
+   }
+   
+   body {
+     font-family: var(--font-body);
+     background: var(--ink-black);
+     color: var(--paper-white);
+     height: 100%;
+     overflow: hidden;
+     cursor: default;
+     -webkit-font-smoothing: antialiased;
+     -moz-osx-font-smoothing: grayscale;
+   }
+   
+   /* 选中文字样式 */
+   ::selection {
+     background: var(--vermilion);
+     color: var(--paper-white);
+   }
+   
+   /* 滚动条 - 国风样式 */
+   ::-webkit-scrollbar {
+     width: 6px;
+   }
+   ::-webkit-scrollbar-track {
+     background: var(--ink-dark);
+   }
+   ::-webkit-scrollbar-thumb {
+     background: var(--ink-light);
+     border-radius: 3px;
+   }
+   
+   /* 全局隐藏类 */
+   .hidden {
+     display: none !important;
+   }
+   
+   .visually-hidden {
+     position: absolute;
+     width: 1px;
+     height: 1px;
+     overflow: hidden;
+     clip: rect(0, 0, 0, 0);
+   }
+   
+   /* 水墨纹理叠加（全局） */
+   body::before {
+     content: '';
+     position: fixed;
+     inset: 0;
+     background:
+       radial-gradient(ellipse at 20% 50%, rgba(200, 168, 85, 0.03) 0%, transparent 50%),
+       radial-gradient(ellipse at 80% 20%, rgba(192, 60, 32, 0.02) 0%, transparent 40%);
+     pointer-events: none;
+     z-index: 9999;
+   }
+   
+   /* 公用过渡动画 */
+   @keyframes fadeIn {
+     from { opacity: 0; }
+     to { opacity: 1; }
+   }
+   
+   @keyframes fadeInUp {
+     from { opacity: 0; transform: translateY(30px); }
+     to { opacity: 1; transform: translateY(0); }
+   }
+   
+   @keyframes slideInLeft {
+     from { opacity: 0; transform: translateX(-40px); }
+     to { opacity: 1; transform: translateX(0); }
+   }
+   
+   @keyframes slideInRight {
+     from { opacity: 0; transform: translateX(40px); }
+     to { opacity: 1; transform: translateX(0); }
+   }
+   
+   @keyframes breathe {
+     0%, 100% { opacity: 0.6; transform: scale(1); }
+     50% { opacity: 1; transform: scale(1.08); }
+   }
+   
+   @keyframes inkSpread {
+     0% { clip-path: circle(0% at center); }
+     100% { clip-path: circle(150% at center); }
+   }
+   
+   /* 水墨边框装饰 */
+   .ink-border {
+     position: relative;
+   }
+   .ink-border::before,
+   .ink-border::after {
+     content: '';
+     position: absolute;
+     background: var(--ink-light);
+     opacity: 0.3;
+   }
+   .ink-border::before {
+     top: 0; left: 10%;
+     width: 80%; height: 1px;
+   }
+   .ink-border::after {
+     bottom: 0; left: 10%;
+     width: 80%; height: 1px;
+   }
