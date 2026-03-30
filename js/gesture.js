@@ -7,6 +7,7 @@
 
   const Gesture = (() => {
     let isActive = false;
+    let isMouseCursorEnabled = true;  // 鼠标光标默认开启
     let hands = null;
     let handsCamera = null;
     let videoEl = null;
@@ -20,6 +21,11 @@
     let lastSwipeTime = 0;
     let isGrabbing = false;
     let grabStartTime = 0;
+
+    // 鼠标光标状态
+    let mouseX = 0, mouseY = 0;
+    let cursorX = 0, cursorY = 0;
+    const CURSOR_SMOOTHING = 0.15;  // 光标平滑系数
 
     const SWIPE_THRESHOLD = 0.15;   // 挥手位移阈值
     const SWIPE_COOLDOWN = 800;     // 挥手冷却时间(ms)
@@ -45,7 +51,58 @@
         toggleBtn.addEventListener('click', toggle);
       }
 
+      // 启用鼠标跟随光标
+      initMouseCursor();
+
       console.log('Gesture module initialized');
+    }
+
+    /* ========== 鼠标跟随光标 ========== */
+    function initMouseCursor() {
+      // 添加鼠标跟随模式 class
+      document.body.classList.add('mouse-cursor-active');
+
+      // 监听鼠标移动
+      document.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+      });
+
+      // 鼠标点击检测
+      document.addEventListener('click', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        triggerClickAtCursor();
+      });
+
+      // 隐藏原生光标
+      document.addEventListener('mouseenter', () => {
+        document.body.style.cursor = 'none';
+      });
+
+      // 开始光标动画循环
+      animateCursor();
+    }
+
+    function animateCursor() {
+      // 平滑插值
+      cursorX += (mouseX - cursorX) * CURSOR_SMOOTHING;
+      cursorY += (mouseY - cursorY) * CURSOR_SMOOTHING;
+
+      updateCursorPosition(cursorX, cursorY);
+      requestAnimationFrame(animateCursor);
+    }
+
+    function updateCursorPosition(x, y) {
+      const cursor = document.getElementById('gesture-cursor');
+      if (!cursor) return;
+
+      cursor.style.left = x + 'px';
+      cursor.style.top = y + 'px';
+    }
+
+    function getCursorPosition() {
+      return { x: cursorX, y: cursorY };
     }
 
     async function startCamera() {
@@ -226,28 +283,32 @@
       detectGrab(landmarks);
     }
   
-    /* ========== P1: 手掌光标 ========== */
+    /* ========== P1: 手掌光标 / 鼠标光标 ========== */
     function updateCursor(x, y) {
       const cursor = document.getElementById('gesture-cursor');
       if (!cursor) return;
-  
-      cursor.style.left = x + 'px';
-      cursor.style.top = y + 'px';
-      cursor.classList.add('visible');
-  
-      // 检测光标下方的热区
-      checkHotspotHover(x, y);
+
+      // 手势模式直接设置位置
+      if (isActive && !isMouseCursorEnabled) {
+        cursor.style.left = x + 'px';
+        cursor.style.top = y + 'px';
+        cursor.classList.add('visible');
+      }
+
+      // 检测光标下方的热区（手势模式）
+      if (isActive && !isMouseCursorEnabled) {
+        checkHotspotHover(x, y);
+      }
     }
-  
+
     function hideCursor() {
       const cursor = document.getElementById('gesture-cursor');
       if (cursor) cursor.classList.remove('visible');
     }
-  
+
     function checkHotspotHover(x, y) {
       const elements = document.elementsFromPoint(x, y);
       const hotspot = elements.find(el => el.closest('.hotspot'));
-      // 可以在这里添加悬浮效果
     }
   
     /* ========== P2: 挥手翻页 ========== */
@@ -352,11 +413,41 @@
     /* ========== 回退方案：无MediaPipe时的简化模式 ========== */
     function setupFallback() {
       console.log('使用鼠标模拟手势模式');
-      // 鼠标移动时显示手势光标
-      document.addEventListener('mousemove', (e) => {
-        if (!isActive) return;
-        updateCursor(e.clientX, e.clientY);
-      });
+      // 鼠标移动时已由 animateCursor 处理，这里只需标记
+      isMouseCursorEnabled = true;
+    }
+
+    function triggerClickAtCursor() {
+      const pos = getCursorPosition();
+      const x = pos.x;
+      const y = pos.y;
+
+      // 查找光标下方的可点击元素
+      const elements = document.elementsFromPoint(x, y);
+      const clickable = elements.find(el =>
+        el.closest('.hotspot') ||
+        el.closest('.timeline-item') ||
+        el.closest('.card-close') ||
+        el.closest('.scene')
+      );
+
+      if (clickable) {
+        const target = clickable.closest('.hotspot, .timeline-item, .card-close, .scene');
+        if (target) {
+          target.click();
+          showClickEffect(x, y);
+        }
+      }
+    }
+
+    // 点击效果
+    function showClickEffect(x, y) {
+      const cursor = document.getElementById('gesture-cursor');
+      if (!cursor) return;
+
+      // 添加点击动画 class
+      cursor.classList.add('clicking');
+      setTimeout(() => cursor.classList.remove('clicking'), 200);
     }
   
     /* ========== UI 辅助 ========== */

@@ -2,7 +2,7 @@
    手势交互 · 状态指示器 & 控制按钮
    ========================================== */
 
-/* 手势光标（手掌追踪） */
+/* 手势光标（手掌追踪 + 鼠标跟随） */
 .gesture-cursor {
     position: fixed;
     width: 28px;
@@ -12,21 +12,82 @@
     pointer-events: none;
     z-index: 9000;
     transform: translate(-50%, -50%);
-    transition: all 0.08s linear;
+    transition: opacity 0.3s ease;
     opacity: 0;
     box-shadow: 0 0 16px rgba(200, 168, 85, 0.3);
-  }
-  
-  .gesture-cursor.visible {
+}
+
+/* 鼠标跟随模式 */
+.gesture-cursor.visible,
+body.mouse-cursor-active .gesture-cursor {
     opacity: 1;
-  }
-  
-  .gesture-cursor.grabbing {
+}
+
+/* 鼠标模式下的光标样式 */
+body.mouse-cursor-active .gesture-cursor {
+    transition: none;
+    width: 24px;
+    height: 24px;
+    border-color: rgba(200, 168, 85, 0.6);
+    box-shadow:
+        0 0 12px rgba(200, 168, 85, 0.4),
+        0 0 24px rgba(200, 168, 85, 0.2);
+}
+
+/* 光标中心点 */
+body.mouse-cursor-active .gesture-cursor::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 6px;
+    background: var(--gold);
+    border-radius: 50%;
+    opacity: 0.8;
+}
+
+/* 鼠标移动时的光标尾迹 */
+body.mouse-cursor-active .gesture-cursor::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(200, 168, 85, 0.2);
+    border-radius: 50%;
+    animation: cursorPulse 1.5s ease-out infinite;
+}
+
+@keyframes cursorPulse {
+    0% {
+        width: 24px;
+        height: 24px;
+        opacity: 0.6;
+    }
+    100% {
+        width: 60px;
+        height: 60px;
+        opacity: 0;
+    }
+}
+
+/* 点击动画 */
+.gesture-cursor.clicking {
+    transform: translate(-50%, -50%) scale(0.7) !important;
+    border-color: var(--vermilion) !important;
+    box-shadow: 0 0 24px rgba(192, 60, 32, 0.6) !important;
+}
+
+.gesture-cursor.grabbing {
     border-color: var(--vermilion);
     background: rgba(192, 60, 32, 0.2);
     box-shadow: 0 0 20px rgba(192, 60, 32, 0.4);
     transform: translate(-50%, -50%) scale(0.8);
-  }
+}
   
   /* 手势状态提示 */
   .gesture-status {
