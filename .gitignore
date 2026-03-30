@@ -1,8 +1,12 @@
 # Dependencies
 node_modules/
 
-# API (local server, not needed for deployment)
+# API (local server, replaced by Netlify Functions)
 api/
+netlify/
+
+# Exception: keep Netlify Functions in git
+# (already in netlify/ folder, will be deployed)
 
 # Netlify
 .netlify/

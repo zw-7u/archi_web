@@ -1,7 +1,6 @@
 // Netlify Function: chat
 // 替代原有的 Express API 代理，转发到通义千问 API
-
-const fetch = require('node-fetch');
+// 使用 Node.js 18+ 原生 fetch，无需额外依赖
 
 // 通义千问 API 配置
 // 注意：请在 Netlify 环境变量中设置 DASHSCOPE_API_KEY

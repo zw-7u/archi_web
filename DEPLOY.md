@@ -138,15 +138,18 @@ git push -u origin main
 - 原来的 `api/` 目录已转换为 `netlify/functions/chat.js`
 - 所有请求 `/api/chat` 会自动重定向到 Netlify Function
 - 前端代码无需修改
+- **无需额外依赖**：Netlify Functions 使用 Node.js 18+ 原生 `fetch` API
 
 ### 关于 API Key 安全
 
 - 永远不要将 API Key 提交到 GitHub
 - 所有敏感的 API Key 都应存储在 Netlify 环境变量中
 
-### 关于 node-fetch
+### 关于依赖
 
-Netlify Functions 原生支持 `node-fetch`，不需要额外安装。
+- 项目根目录的 `package.json` 仅包含基本信息，无实际依赖
+- Netlify Functions 使用 Node.js 18+ 原生 API（无需安装 node-fetch 等包）
+- 原来的 `api/` 文件夹仅用于本地开发，不会上传到 GitHub
 
 ---
 

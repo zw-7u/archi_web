@@ -1,0 +1,10 @@
+{
+  "name": "his-archi",
+  "version": "1.0.0",
+  "description": "故宫十二时辰 - 皇帝的一天",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {}
+}
