@@ -1,41 +1,51 @@
 /* ==========================================
-   手势交互 · 状态指示器 & 控制按钮
+   手势交互 · 光标 & 状态指示器
    ========================================== */
 
-/* 手势光标（手掌追踪 + 鼠标跟随） */
+/* ---- 手势光标容器 ---- */
+#gesture-indicator {
+  /* 默认隐藏，Gesture.init() 会移除 hidden 类 */
+  /* 但 display:none 会被 body.mouse-cursor-active .gesture-cursor 的 opacity:1 覆盖 */
+}
+
+#gesture-indicator.hidden {
+  /* 保留此规则以便手势关闭时隐藏 */
+}
+
+/* ---- 手势光标 ---- */
 .gesture-cursor {
     position: fixed;
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     border: 2px solid var(--gold);
     border-radius: 50%;
     pointer-events: none;
     z-index: 9000;
     transform: translate(-50%, -50%);
-    transition: opacity 0.3s ease;
-    opacity: 0;
-    box-shadow: 0 0 16px rgba(200, 168, 85, 0.3);
+    opacity: 0; /* 默认隐藏 */
+    box-shadow:
+        0 0 12px rgba(200, 168, 85, 0.3),
+        0 0 24px rgba(200, 168, 85, 0.1);
+    transition:
+        width 0.2s ease,
+        height 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        opacity 0.3s ease;
 }
 
-/* 鼠标跟随模式 */
-.gesture-cursor.visible,
+/* 鼠标模式 / 手掌滑动 → 始终显示 */
 body.mouse-cursor-active .gesture-cursor {
     opacity: 1;
 }
 
-/* 鼠标模式下的光标样式 */
-body.mouse-cursor-active .gesture-cursor {
-    transition: none;
-    width: 24px;
-    height: 24px;
-    border-color: rgba(200, 168, 85, 0.6);
-    box-shadow:
-        0 0 12px rgba(200, 168, 85, 0.4),
-        0 0 24px rgba(200, 168, 85, 0.2);
+/* 也支持 JS 手动添加 .visible 类 */
+.gesture-cursor.visible {
+    opacity: 1 !important;
 }
 
 /* 光标中心点 */
-body.mouse-cursor-active .gesture-cursor::before {
+.gesture-cursor::before {
     content: '';
     position: absolute;
     top: 50%;
@@ -45,11 +55,11 @@ body.mouse-cursor-active .gesture-cursor::before {
     height: 6px;
     background: var(--gold);
     border-radius: 50%;
-    opacity: 0.8;
+    opacity: 0.85;
 }
 
-/* 鼠标移动时的光标尾迹 */
-body.mouse-cursor-active .gesture-cursor::after {
+/* 外圈脉动 */
+.gesture-cursor::after {
     content: '';
     position: absolute;
     top: 50%;
@@ -57,40 +67,95 @@ body.mouse-cursor-active .gesture-cursor::after {
     transform: translate(-50%, -50%);
     width: 40px;
     height: 40px;
-    border: 1px solid rgba(200, 168, 85, 0.2);
+    border: 1px solid rgba(200, 168, 85, 0.18);
     border-radius: 50%;
-    animation: cursorPulse 1.5s ease-out infinite;
+    animation: cursorPulse 1.6s ease-out infinite;
 }
 
 @keyframes cursorPulse {
     0% {
-        width: 24px;
-        height: 24px;
-        opacity: 0.6;
+        width: 26px;
+        height: 26px;
+        opacity: 0.5;
     }
     100% {
-        width: 60px;
-        height: 60px;
+        width: 64px;
+        height: 64px;
         opacity: 0;
     }
 }
 
-/* 点击动画 */
-.gesture-cursor.clicking {
-    transform: translate(-50%, -50%) scale(0.7) !important;
-    border-color: var(--vermilion) !important;
-    box-shadow: 0 0 24px rgba(192, 60, 32, 0.6) !important;
+/* ---- 手势状态样式 ---- */
+
+/* 握拳：缩小，深色内核 */
+.gesture-cursor.fist {
+    width: 20px !important;
+    height: 20px !important;
+    border-color: rgba(200, 168, 85, 0.5);
+    background: rgba(200, 168, 85, 0.08);
+    box-shadow:
+        0 0 10px rgba(200, 168, 85, 0.2),
+        0 0 20px rgba(200, 168, 85, 0.1);
+}
+.gesture-cursor.fist::before {
+    width: 8px;
+    height: 8px;
+    background: rgba(200, 168, 85, 0.6);
 }
 
-.gesture-cursor.grabbing {
-    border-color: var(--vermilion);
-    background: rgba(192, 60, 32, 0.2);
-    box-shadow: 0 0 20px rgba(192, 60, 32, 0.4);
-    transform: translate(-50%, -50%) scale(0.8);
+/* 食指指向：尖锐、细小 */
+.gesture-cursor.pointing {
+    width: 14px !important;
+    height: 14px !important;
+    border-color: rgba(90, 138, 106, 0.8);
+    box-shadow:
+        0 0 8px rgba(90, 138, 106, 0.4),
+        0 0 16px rgba(90, 138, 106, 0.2);
+    background: rgba(90, 138, 106, 0.15);
 }
-  
-  /* 手势状态提示 */
-  .gesture-status {
+.gesture-cursor.pointing::before {
+    width: 4px;
+    height: 4px;
+    background: var(--jade);
+}
+.gesture-cursor.pointing::after {
+    width: 30px;
+    height: 30px;
+    border-color: rgba(90, 138, 106, 0.15);
+}
+
+/* 捏合缩放：大圆环 */
+.gesture-cursor.pinching {
+    width: 34px !important;
+    height: 34px !important;
+    border-color: rgba(192, 60, 32, 0.7);
+    box-shadow:
+        0 0 16px rgba(192, 60, 32, 0.3),
+        0 0 32px rgba(192, 60, 32, 0.15);
+    background: rgba(192, 60, 32, 0.1);
+}
+.gesture-cursor.pinching::before {
+    width: 10px;
+    height: 10px;
+    background: var(--vermilion);
+    opacity: 1;
+}
+.gesture-cursor.pinching::after {
+    width: 50px;
+    height: 50px;
+    border-color: rgba(192, 60, 32, 0.2);
+}
+
+/* 点击动画 */
+.gesture-cursor.clicking {
+    transform: translate(-50%, -50%) scale(0.65) !important;
+    border-color: var(--vermilion) !important;
+    box-shadow: 0 0 28px rgba(192, 60, 32, 0.7) !important;
+    transition: transform 0.08s ease, box-shadow 0.08s ease !important;
+}
+
+/* ---- 手势状态指示条 ---- */
+.gesture-status {
     position: fixed;
     top: 20px;
     left: 50%;
@@ -98,154 +163,106 @@ body.mouse-cursor-active .gesture-cursor::after {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 20px;
-    background: rgba(26, 23, 20, 0.8);
+    padding: 7px 18px;
+    background: rgba(26, 23, 20, 0.82);
     backdrop-filter: blur(8px);
-    border: 1px solid var(--ink-medium);
+    border: 1px solid rgba(200, 168, 85, 0.25);
+    border-radius: 24px;
     z-index: 800;
     opacity: 0;
-    transition: opacity var(--duration-normal) var(--ease-out);
-  }
-  
-  .gesture-status.visible {
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+}
+
+.gesture-status.visible {
     opacity: 1;
-    animation: statusSlideDown 0.5s var(--ease-out);
-  }
-  
-  @keyframes statusSlideDown {
-    from {
-      opacity: 0;
-      transform: translateX(-50%) translateY(-20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-  }
-  
-  .gesture-icon {
-    font-size: 16px;
-  }
-  
-  .gesture-label {
+}
+
+.gesture-icon {
+    font-size: 14px;
+}
+
+.gesture-label {
     font-size: 12px;
-    color: var(--ink-faint);
-    letter-spacing: 0.1em;
-  }
-  
-  /* 手势开关按钮 */
-  .gesture-toggle {
+    color: var(--paper-warm);
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+}
+
+/* ---- 手势开关按钮 ---- */
+.gesture-toggle {
     position: fixed;
     top: 70px;
     right: 20px;
     z-index: 9999;
     width: 44px;
     height: 44px;
-    background: rgba(26, 23, 20, 0.7);
+    background: rgba(26, 23, 20, 0.75);
     backdrop-filter: blur(8px);
-    border: 1px solid var(--ink-medium);
+    border: 1px solid rgba(74, 66, 54, 0.6);
     color: var(--ink-faint);
+    border-radius: 8px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all var(--duration-normal) var(--ease-out);
-  }
-  
-  .gesture-toggle:hover {
+    transition: all 0.3s ease;
+}
+
+.gesture-toggle:hover {
     border-color: var(--gold);
     color: var(--gold);
-  }
-  
-  .gesture-toggle.active {
+    box-shadow: 0 0 12px rgba(200, 168, 85, 0.15);
+}
+
+.gesture-toggle.active {
     border-color: var(--jade);
     color: var(--jade);
     box-shadow: 0 0 12px rgba(90, 138, 106, 0.3);
-  }
-  
-  /* 挥手方向提示 */
-  .swipe-hint {
+}
+
+/* ---- 挥手方向提示 ---- */
+.swipe-hint {
     position: fixed;
     top: 50%;
     transform: translateY(-50%);
     z-index: 800;
-    padding: 12px 20px;
-    background: rgba(26, 23, 20, 0.7);
+    padding: 12px 22px;
+    background: rgba(26, 23, 20, 0.75);
     backdrop-filter: blur(4px);
-    border: 1px solid var(--ink-medium);
+    border: 1px solid rgba(200, 168, 85, 0.2);
+    border-radius: 6px;
     color: var(--paper-warm);
     font-family: var(--font-body);
     font-size: 14px;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.12em;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.3s;
-  }
-  
-  .swipe-hint.left {
-    left: 30px;
-  }
-  
-  .swipe-hint.right {
-    right: 30px;
-  }
-  
-  .swipe-hint.show {
+    transition: opacity 0.25s;
+}
+
+.swipe-hint.left  { left: 28px; }
+.swipe-hint.right { right: 28px; }
+
+.swipe-hint.show {
     opacity: 1;
-    animation: swipeFlash 0.6s var(--ease-out);
-  }
-  
-  @keyframes swipeFlash {
-    0% { opacity: 0; transform: translateY(-50%) translateX(20px); }
-    100% { opacity: 1; transform: translateY(-50%) translateX(0); }
-  }
-  
-  /* AI聊天小组件入口 */
-  .ai-chat-widget {
-    position: fixed;
-    bottom: 90px;
-    right: 24px;
-    z-index: 300;
-  }
-  
-  .ai-chat-trigger {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    background: var(--vermilion);
-    border: none;
-    color: var(--paper-white);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow:
-      0 4px 16px rgba(192, 60, 32, 0.3),
-      0 0 0 1px rgba(192, 60, 32, 0.2);
-    transition: all var(--duration-normal) var(--ease-out);
-  }
-  
-  .ai-chat-trigger:hover {
-    transform: scale(1.08);
-    box-shadow:
-      0 6px 24px rgba(192, 60, 32, 0.4),
-      0 0 0 1px rgba(192, 60, 32, 0.3);
-  }
-  
-  /* 摄像头预览小窗（调试用，可隐藏） */
-  #camera-preview {
+}
+
+/* ---- 摄像头预览小窗 ---- */
+#camera-preview {
     position: fixed;
     bottom: 90px;
     left: 20px;
     width: 160px;
     height: 120px;
-    border: 1px solid var(--ink-medium);
-    z-index: 200;
-    opacity: 0.5;
+    border: 1px solid rgba(74, 66, 54, 0.6);
+    border-radius: 6px;
+    z-index: 9998;
+    opacity: 0;
     transform: scaleX(-1);
     display: none;
-  }
-  
-  #camera-preview.visible {
-    display: block;
-  }
+}
+
+#camera-preview.visible {
+    opacity: 0.4;
+}

@@ -16,11 +16,22 @@
     visibility: hidden;
     transition:
       opacity var(--duration-scene) var(--ease-in-out),
-      visibility var(--duration-scene);
+      visibility var(--duration-scene),
+      transform 0.4s var(--ease-out);
     display: flex;
     align-items: center;
     justify-content: flex-start;
     padding-left: 8%;
+    transform-origin: center center;
+  }
+
+  /* 握拳时冻结：阻止滑动切换，但保留热区可点击 */
+  .scene.frozen {
+    pointer-events: none;
+  }
+  .scene.frozen .hotspot,
+  .scene.frozen .hotspot * {
+    pointer-events: auto;
   }
   
   .scene.active {

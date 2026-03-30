@@ -1,180 +1,520 @@
 /* ==========================================
    手势交互 · MediaPipe Hands
-   P1: 手掌移动控制光标
-   P2: 挥手左右切换时辰
-   P3: 抓取手势打开详情
+   P1: 手掌左右滑动 → 切换时辰
+   P2: 拇指+食指捏合 → 缩放场景（transform scale）
+   P3: 握拳 → 画面停止，光标跟随食指移动，停留触发点击
+   P4: 食指指向 → 光标跟随食指移动，停留触发悬停/点击
    ========================================== */
 
   const Gesture = (() => {
     let isActive = false;
-    let isMouseCursorEnabled = true;  // 鼠标光标默认开启
     let hands = null;
     let handsCamera = null;
     let videoEl = null;
     let mediaPipeLoaded = false;
     let isInitializing = false;
 
-    // 手势状态
-    let palmX = 0, palmY = 0;
-    let prevPalmX = 0;
+    // ---- 手势状态机 ----
+    // 'none' | 'swiping' | 'fist' | 'pointing' | 'pinching'
+    let currentGesture = 'none';
+    let prevGesture = 'none';
+
+    // 光标位置（平滑插值）
+    let targetX = window.innerWidth / 2;
+    let targetY = window.innerHeight / 2;
+    let cursorX = targetX;
+    let cursorY = targetY;
+    const CURSOR_SMOOTH = 0.12;   // 光标跟随平滑系数（越小越跟手）
+    const CURSOR_SMOOTH_FIST = 0.25; // 握拳时光标更跟手
+
+    // 上一帧手掌位置（用于检测滑动方向）
+    let prevPalmX = -1;
+    let prevPalmY = -1;
+
+    // 缩放状态（捏合）
+    let currentScale = 1;
+    let baseScale = 1;
+    let initialPinchDist = 0;
+
+    // 挥动检测
     let swipeBuffer = [];
     let lastSwipeTime = 0;
-    let isGrabbing = false;
-    let grabStartTime = 0;
+    const SWIPE_THRESHOLD = 0.13;
+    const SWIPE_COOLDOWN = 600;
 
-    // 鼠标光标状态
-    let mouseX = 0, mouseY = 0;
-    let cursorX = 0, cursorY = 0;
-    const CURSOR_SMOOTHING = 0.15;  // 光标平滑系数
+    // 握拳停留点击
+    let dwellStartTime = 0;
+    let dwellX = 0, dwellY = 0;
+    const DWELL_TIME = 600;       // 停留 600ms 触发点击
+    const DWELL_MOVE_THRESHOLD = 25; // 移动超过 25px 重置计时
 
-    const SWIPE_THRESHOLD = 0.15;   // 挥手位移阈值
-    const SWIPE_COOLDOWN = 800;     // 挥手冷却时间(ms)
-    const GRAB_HOLD_TIME = 500;     // 抓取持续时间(ms)
+    // 点击效果动画
+    let clickAnimTimeout = null;
 
-    // CDN URLs (updated to latest stable versions)
+    // CDN
     const MEDIAPIPE_HANDS_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js';
-    const CAMERA_UTILS_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js';
-    const CONTROL_UTILS_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/control_utils@0.6.13450205/control_utils.js';
+    const CAMERA_UTILS_URL    = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js';
 
-    async function init() {
-      // 创建视频元素
+    // ─────────────────────────────────────────────
+    // 初始化
+    // ─────────────────────────────────────────────
+    function init() {
+      // 创建摄像头预览元素
       videoEl = document.createElement('video');
       videoEl.id = 'camera-preview';
       videoEl.setAttribute('playsinline', '');
       videoEl.setAttribute('autoplay', '');
-      videoEl.style.cssText = 'position:fixed;bottom:90px;left:20px;width:160px;height:120px;border:1px solid var(--ink-medium, #4a4236);z-index:200;opacity:0.5;transform:scaleX(-1);display:none;';
+      videoEl.style.cssText = 'position:fixed;bottom:90px;left:20px;width:160px;height:120px;border:1px solid #4a4236;z-index:9998;opacity:0.4;transform:scaleX(-1);display:none;border-radius:4px;';
       document.body.appendChild(videoEl);
 
-      // 绑定切换按钮
+      // 绑定手势开关按钮
       const toggleBtn = document.getElementById('gesture-toggle');
-      if (toggleBtn) {
-        toggleBtn.addEventListener('click', toggle);
-      }
+      if (toggleBtn) toggleBtn.addEventListener('click', toggle);
 
-      // 启用鼠标跟随光标
+      // 启用鼠标光标跟随模式
       initMouseCursor();
 
-      console.log('Gesture module initialized');
+      // 显示光标和手势指示器（立即可见）
+      showCursorUI();
+
+      // 启动光标动画循环
+      animateCursor();
+
+      console.log('[Gesture] 模块已初始化（鼠标跟随模式）');
     }
 
-    /* ========== 鼠标跟随光标 ========== */
+    // ─────────────────────────────────────────────
+    // 鼠标跟随模式（默认 / 降级方案）
+    // ─────────────────────────────────────────────
     function initMouseCursor() {
-      // 添加鼠标跟随模式 class
       document.body.classList.add('mouse-cursor-active');
+      document.body.style.cursor = 'none';
 
-      // 监听鼠标移动
-      document.addEventListener('mousemove', (e) => {
-        mouseX = e.clientX;
-        mouseY = e.clientY;
-      });
-
-      // 鼠标点击检测
-      document.addEventListener('click', (e) => {
-        mouseX = e.clientX;
-        mouseY = e.clientY;
-        triggerClickAtCursor();
-      });
-
-      // 隐藏原生光标
+      // 鼠标移入时隐藏原生光标
       document.addEventListener('mouseenter', () => {
         document.body.style.cursor = 'none';
       });
 
-      // 开始光标动画循环
-      animateCursor();
+      // 鼠标移动：更新目标光标位置
+      document.addEventListener('mousemove', (e) => {
+        targetX = e.clientX;
+        targetY = e.clientY;
+      });
+
+      // 鼠标点击
+      document.addEventListener('click', (e) => {
+        targetX = e.clientX;
+        targetY = e.clientY;
+        cursorX = e.clientX;
+        cursorY = e.clientY;
+        performClick(e.clientX, e.clientY);
+      });
     }
 
-    function animateCursor() {
-      // 平滑插值
-      cursorX += (mouseX - cursorX) * CURSOR_SMOOTHING;
-      cursorY += (mouseY - cursorY) * CURSOR_SMOOTHING;
+    // ─────────────────────────────────────────────
+    // 显示光标 UI
+    // ─────────────────────────────────────────────
+    function showCursorUI() {
+      const indicator = document.getElementById('gesture-indicator');
+      if (indicator) {
+        indicator.classList.remove('hidden');
+        indicator.style.pointerEvents = 'none';
+      }
+      const cursor = document.getElementById('gesture-cursor');
+      if (cursor) cursor.classList.add('visible');
+    }
 
-      updateCursorPosition(cursorX, cursorY);
+    function hideCursorUI() {
+      const cursor = document.getElementById('gesture-cursor');
+      if (cursor) cursor.classList.remove('visible');
+    }
+
+    // ─────────────────────────────────────────────
+    // 光标动画循环（所有模式共用）
+    // ─────────────────────────────────────────────
+    function animateCursor() {
+      const smooth = currentGesture === 'fist' ? CURSOR_SMOOTH_FIST : CURSOR_SMOOTH;
+      cursorX += (targetX - cursorX) * smooth;
+      cursorY += (targetY - cursorY) * smooth;
+
+      // 实时更新光标 DOM 位置
+      const cursor = document.getElementById('gesture-cursor');
+      if (cursor) {
+        cursor.style.left = cursorX + 'px';
+        cursor.style.top  = cursorY + 'px';
+      }
+
       requestAnimationFrame(animateCursor);
     }
 
-    function updateCursorPosition(x, y) {
+    // ─────────────────────────────────────────────
+    // 手势检测回调（MediaPipe Hands）
+    // ─────────────────────────────────────────────
+    function onHandResults(results) {
+      if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+        // 没有检测到手：恢复默认鼠标模式
+        hideCursorUI();
+        resetGestureState();
+        currentGesture = 'none';
+        return;
+      }
+
+      showCursorUI();
+      const lm = results.multiHandLandmarks[0];
+
+      // 更新光标到食指指尖位置
+      const indexTip = lm[8]; // 食指指尖
+      targetX = (1 - indexTip.x) * window.innerWidth;
+      targetY = indexTip.y * window.innerHeight;
+
+      // 检测当前手势类型
+      detectAndApplyGesture(lm);
+    }
+
+    // ─────────────────────────────────────────────
+    // 手势分类与处理
+    // ─────────────────────────────────────────────
+    function detectAndApplyGesture(lm) {
+      const gesture = classifyGesture(lm);
+
+      if (gesture !== prevGesture) {
+        onGestureChange(gesture, prevGesture);
+        prevGesture = gesture;
+      }
+
+      currentGesture = gesture;
+
+      switch (gesture) {
+        case 'swiping':
+          handleSwiping(lm);
+          break;
+        case 'pinching':
+          handlePinching(lm);
+          break;
+        case 'fist':
+          handleFist(lm);
+          break;
+        case 'pointing':
+          handlePointing(lm);
+          break;
+        default:
+          break;
+      }
+    }
+
+    // 手势分类：返回 'swiping' | 'pinching' | 'fist' | 'pointing' | 'none'
+    function classifyGesture(lm) {
+      // 计算各手指伸展状态
+      const thumbTip  = lm[4];
+      const indexTip  = lm[8];
+      const middleTip = lm[12];
+      const ringTip   = lm[16];
+      const pinkyTip  = lm[20];
+
+      const indexMcp = lm[5];
+      const thumbIp   = lm[3];   // 拇指第二关节
+
+      // 手腕 / 掌心参考
+      const wrist = lm[0];
+      const palmCenter = lm[9];  // 中指根部
+
+      // 握拳判断：所有指尖都弯曲（指尖到手腕距离 < 手指中关节到手腕距离）
+      const wristToIndexMcp = dist(lm[5], wrist);
+      const isIndexClosed   = dist(lm[8], wrist)  < dist(lm[6], wrist)  * 1.1;
+      const isMiddleClosed  = dist(lm[12], wrist) < dist(lm[10], wrist) * 1.1;
+      const isRingClosed    = dist(lm[16], wrist) < dist(lm[14], wrist) * 1.1;
+      const isPinkyClosed    = dist(lm[20], wrist) < dist(lm[18], wrist) * 1.1;
+      const isThumbClosed   = dist(lm[4], wrist)  < dist(lm[3], wrist)  * 1.15;
+
+      if (isIndexClosed && isMiddleClosed && isRingClosed && isPinkyClosed) {
+        // 检测是否是食指指向而非握拳（食指伸展，拇指可伸可屈）
+        const isIndexExtended = dist(lm[8], wrist) > dist(lm[5], wrist) * 1.2;
+        if (isIndexExtended) {
+          return 'pointing';
+        }
+        return 'fist';
+      }
+
+      // 捏合缩放判断：拇指 + 食指伸展且两指尖距离近
+      const pinchDist = dist(thumbTip, indexTip);
+      const pinchThreshold = 0.07; // 归一化距离阈值
+
+      // 食指和中指伸展程度
+      const isIndexExt = dist(lm[8], wrist) > dist(lm[5], wrist);
+      const isMiddleExt = dist(lm[12], wrist) > dist(lm[10], wrist);
+
+      // 捏合：拇指尖和食指尖距离很小
+      if (pinchDist < pinchThreshold && isIndexExt) {
+        return 'pinching';
+      }
+
+      // 默认 → 滑动（手掌）
+      return 'swiping';
+    }
+
+    function onGestureChange(newG, oldG) {
       const cursor = document.getElementById('gesture-cursor');
-      if (!cursor) return;
+      const indicator = document.getElementById('gesture-indicator');
 
-      cursor.style.left = x + 'px';
-      cursor.style.top = y + 'px';
+      // 清除点击动画
+      if (clickAnimTimeout) { clearTimeout(clickAnimTimeout); clickAnimTimeout = null; }
+      if (cursor) cursor.classList.remove('clicking', 'pinching', 'pointing');
+
+      // 重置 dwell 计时
+      dwellStartTime = 0;
+
+      switch (newG) {
+        case 'fist':
+          if (cursor) {
+            cursor.style.width = '22px';
+            cursor.style.height = '22px';
+            cursor.classList.add('fist');
+          }
+          if (indicator) updateGestureStatus('握拳 · 移动光标');
+          Scenes.freeze(true);   // 通知场景冻结
+          break;
+        case 'pointing':
+          if (cursor) {
+            cursor.style.width = '18px';
+            cursor.style.height = '18px';
+            cursor.classList.add('pointing');
+          }
+          if (indicator) updateGestureStatus('食指 · 点击热区');
+          Scenes.freeze(false);
+          dwellStartTime = Date.now();
+          dwellX = targetX;
+          dwellY = targetY;
+          break;
+        case 'pinching':
+          if (cursor) {
+            cursor.style.width = '32px';
+            cursor.style.height = '32px';
+            cursor.classList.add('pinching');
+          }
+          if (indicator) updateGestureStatus('捏合 · 缩放');
+          Scenes.freeze(false);
+          break;
+        case 'swiping':
+          if (cursor) {
+            cursor.style.width = '26px';
+            cursor.style.height = '26px';
+            cursor.classList.remove('fist', 'pointing', 'pinching');
+          }
+          if (indicator) updateGestureStatus('手掌 · 左右滑动切换');
+          Scenes.freeze(false);
+          break;
+      }
     }
 
-    function getCursorPosition() {
-      return { x: cursorX, y: cursorY };
+    // ─────────────────────────────────────────────
+    // P1: 滑动 → 切换时辰
+    // ─────────────────────────────────────────────
+    function handleSwiping(lm) {
+      const palm = lm[9];
+      const x = 1 - palm.x; // 镜像
+
+      if (prevPalmX < 0) { prevPalmX = x; return; }
+      const dx = x - prevPalmX;
+      prevPalmX = x;
+
+      // 检测快速左右移动
+      const now = Date.now();
+      swipeBuffer.push({ dx, time: now });
+      swipeBuffer = swipeBuffer.filter(p => now - p.time < 400);
+
+      if (swipeBuffer.length >= 4) {
+        const totalDx = swipeBuffer.reduce((sum, p) => sum + p.dx, 0);
+        if (totalDx > SWIPE_THRESHOLD) {
+          Scenes.next();
+          swipeBuffer = [];
+          showSwipeHint('right');
+        } else if (totalDx < -SWIPE_THRESHOLD) {
+          Scenes.prev();
+          swipeBuffer = [];
+          showSwipeHint('left');
+        }
+      }
     }
 
+    // ─────────────────────────────────────────────
+    // P2: 捏合 → 缩放场景
+    // ─────────────────────────────────────────────
+    function handlePinching(lm) {
+      const thumbTip = lm[4];
+      const indexTip = lm[8];
+
+      if (initialPinchDist === 0) {
+        initialPinchDist = dist(thumbTip, indexTip);
+        baseScale = currentScale;
+        return;
+      }
+
+      const currentDist = dist(thumbTip, indexTip);
+      const ratio = currentDist / initialPinchDist;
+      currentScale = Math.max(0.5, Math.min(3.0, baseScale * ratio));
+
+      Scenes.applyZoom(currentScale);
+    }
+
+    // ─────────────────────────────────────────────
+    // P3: 握拳 → 画面冻结，光标跟随食指移动，停留点击
+    // ─────────────────────────────────────────────
+    function handleFist(lm) {
+      Scenes.freeze(true);
+
+      // 光标跟随已在 animateCursor 中通过 targetX/targetY 实现
+    }
+
+    // ─────────────────────────────────────────────
+    // P4: 食指指向 → 光标跟随，停留触发点击
+    // ─────────────────────────────────────────────
+    function handlePointing(lm) {
+      Scenes.freeze(false);
+
+      const now = Date.now();
+      const moved = Math.hypot(targetX - dwellX, targetY - dwellY);
+
+      if (moved > DWELL_MOVE_THRESHOLD) {
+        dwellStartTime = now;
+        dwellX = targetX;
+        dwellY = targetY;
+      }
+
+      if (dwellStartTime > 0 && now - dwellStartTime >= DWELL_TIME) {
+        dwellStartTime = now; // 重置，防止重复触发
+        performClick(targetX, targetY);
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // 执行点击
+    // ─────────────────────────────────────────────
+    function performClick(x, y) {
+      const cursor = document.getElementById('gesture-cursor');
+      if (cursor) {
+        cursor.classList.add('clicking');
+        if (clickAnimTimeout) clearTimeout(clickAnimTimeout);
+        clickAnimTimeout = setTimeout(() => cursor.classList.remove('clicking'), 300);
+      }
+
+      const elements = document.elementsFromPoint(x, y);
+      const target = elements.find(el =>
+        el.closest('.hotspot') ||
+        el.closest('.timeline-item') ||
+        el.closest('.card-close') ||
+        el.closest('.scene') ||
+        el.closest('#voice-assistant-trigger') ||
+        el.closest('#gesture-toggle')
+      );
+
+      if (target) {
+        const el = target.closest('.hotspot, .timeline-item, .card-close, .scene, #voice-assistant-trigger, #gesture-toggle, .ast-close-btn');
+        if (el) el.click();
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // 工具函数
+    // ─────────────────────────────────────────────
+    function dist(a, b) {
+      return Math.sqrt(
+        (a.x - b.x) ** 2 +
+        (a.y - b.y) ** 2 +
+        ((a.z || 0) - (b.z || 0)) ** 2
+      );
+    }
+
+    function resetGestureState() {
+      prevPalmX = -1;
+      swipeBuffer = [];
+      initialPinchDist = 0;
+      dwellStartTime = 0;
+      currentGesture = 'none';
+      prevGesture = 'none';
+      const cursor = document.getElementById('gesture-cursor');
+      if (cursor) {
+        cursor.classList.remove('fist', 'pointing', 'pinching', 'clicking');
+      }
+      Scenes.freeze(false);
+    }
+
+    // ─────────────────────────────────────────────
+    // 状态提示
+    // ─────────────────────────────────────────────
+    function updateGestureStatus(text) {
+      const status = document.getElementById('gesture-status');
+      const label = status?.querySelector('.gesture-label');
+      if (label) label.textContent = text;
+      if (status) {
+        status.classList.add('visible');
+      }
+    }
+
+    function showSwipeHint(direction) {
+      let hint = document.querySelector('.swipe-hint.' + direction);
+      if (!hint) {
+        hint = document.createElement('div');
+        hint.className = `swipe-hint ${direction}`;
+        document.getElementById('scenes-container')?.appendChild(hint);
+      }
+      hint.textContent = direction === 'right' ? '→ 下一时辰' : '← 上一时辰';
+      hint.classList.add('show');
+      setTimeout(() => hint.classList.remove('show'), 700);
+    }
+
+    // ─────────────────────────────────────────────
+    // MediaPipe Hands 摄像头加载
+    // ─────────────────────────────────────────────
     async function startCamera() {
       try {
-        // First check if we can access the camera
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: 640, height: 480, facingMode: 'user' }
         });
-
-        // Attach stream to video element
         videoEl.srcObject = stream;
         videoEl.style.display = 'block';
 
-        await new Promise((resolve, reject) => {
+        await new Promise((resolve) => {
           videoEl.onloadedmetadata = () => {
-            videoEl.play().then(resolve).catch(reject);
+            videoEl.play().then(resolve).catch(resolve);
           };
-          videoEl.onerror = reject;
-          // Timeout fallback
-          setTimeout(resolve, 1000);
+          setTimeout(resolve, 1500);
         });
 
-        // Try to load MediaPipe
         const loaded = await loadMediaPipe();
-
         if (loaded) {
-          showStatus('手势控制已开启');
+          updateGestureStatus('手势控制已开启');
         } else {
-          // Fallback to mouse simulation
           setupFallback();
-          showStatus('使用鼠标模式');
+          updateGestureStatus('鼠标模式');
         }
-
         return true;
       } catch (err) {
-        console.warn('摄像头访问失败:', err);
-        showStatus('摄像头访问失败');
+        console.warn('[Gesture] 摄像头访问失败:', err);
+        updateGestureStatus('摄像头不可用');
         return false;
       }
     }
 
     async function loadMediaPipe() {
-      // Check if already loaded
       if (typeof window.Hands !== 'undefined') {
         setupHands();
-        mediaPipeLoaded = true;
         return true;
       }
-
       if (isInitializing) {
-        // Wait for ongoing initialization
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(r => setTimeout(r, 2000));
         return mediaPipeLoaded;
       }
 
       isInitializing = true;
-
       try {
-        // Load MediaPipe Hands
         await loadScript(MEDIAPIPE_HANDS_URL);
         await loadScript(CAMERA_UTILS_URL);
-
-        // Verify Hands is available
-        if (typeof window.Hands === 'undefined') {
-          throw new Error('Hands class not available after loading');
-        }
-
+        if (typeof window.Hands === 'undefined') throw new Error('Hands not available');
         setupHands();
         mediaPipeLoaded = true;
         return true;
-      } catch (err) {
-        console.warn('MediaPipe 加载失败:', err);
+      } catch (e) {
+        console.warn('[Gesture] MediaPipe 加载失败:', e);
         isInitializing = false;
         return false;
       }
@@ -182,35 +522,21 @@
 
     function loadScript(src) {
       return new Promise((resolve, reject) => {
-        // Check if script already exists
-        const existing = document.querySelector(`script[src="${src}"]`);
-        if (existing) {
-          resolve();
-          return;
-        }
-
-        const script = document.createElement('script');
-        script.src = src;
-        script.crossOrigin = 'anonymous';
-        script.onload = resolve;
-        script.onerror = () => {
-          console.warn(`Failed to load: ${src}`);
-          reject(new Error(`Script load failed: ${src}`));
-        };
-        document.head.appendChild(script);
+        if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+        const s = document.createElement('script');
+        s.src = src;
+        s.crossOrigin = 'anonymous';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error(`Load failed: ${src}`));
+        document.head.appendChild(s);
       });
     }
 
     function setupHands() {
-      if (typeof window.Hands === 'undefined') {
-        setupFallback();
-        return;
-      }
+      if (typeof window.Hands === 'undefined') { setupFallback(); return; }
 
       hands = new window.Hands({
-        locateFile: (file) => {
-          return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${file}`;
-        }
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${file}`
       });
 
       hands.setOptions({
@@ -222,296 +548,67 @@
 
       hands.onResults(onHandResults);
 
-      // Check if Camera class is available
       if (typeof window.Camera === 'undefined') {
-        console.warn('Camera class not available, using manual frame processing');
-        setupManualFrameLoop();
+        startManualFrameLoop();
         return;
       }
 
       handsCamera = new window.Camera(videoEl, {
         onFrame: async () => {
-          if (isActive && hands) {
-            await hands.send({ image: videoEl });
-          }
+          if (isActive && hands) await hands.send({ image: videoEl });
         },
-        width: 640,
-        height: 480
+        width: 640, height: 480
       });
-
       handsCamera.start();
     }
 
-    function setupManualFrameLoop() {
-      // Fallback: manually process video frames
-      const processFrame = async () => {
+    function startManualFrameLoop() {
+      const loop = async () => {
         if (isActive && hands && videoEl.readyState >= 2) {
-          try {
-            await hands.send({ image: videoEl });
-          } catch (e) {
-            // Ignore errors during frame processing
-          }
+          try { await hands.send({ image: videoEl }); } catch {}
         }
-        if (isActive) {
-          requestAnimationFrame(processFrame);
-        }
+        if (isActive) requestAnimationFrame(loop);
       };
-      processFrame();
-    }
-  
-    /* ========== 手势识别回调 ========== */
-    function onHandResults(results) {
-      if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-        hideCursor();
-        return;
-      }
-  
-      const landmarks = results.multiHandLandmarks[0];
-  
-      // P1: 手掌中心控制光标
-      const palmCenter = landmarks[9]; // 中指根部
-      prevPalmX = palmX;
-      palmX = 1 - palmCenter.x; // 镜像翻转
-      palmY = palmCenter.y;
-  
-      updateCursor(palmX * window.innerWidth, palmY * window.innerHeight);
-  
-      // P2: 挥手检测（左右快速移动）
-      detectSwipe(palmX);
-  
-      // P3: 抓取检测（指尖与掌心距离）
-      detectGrab(landmarks);
-    }
-  
-    /* ========== P1: 手掌光标 / 鼠标光标 ========== */
-    function updateCursor(x, y) {
-      const cursor = document.getElementById('gesture-cursor');
-      if (!cursor) return;
-
-      // 手势模式直接设置位置
-      if (isActive && !isMouseCursorEnabled) {
-        cursor.style.left = x + 'px';
-        cursor.style.top = y + 'px';
-        cursor.classList.add('visible');
-      }
-
-      // 检测光标下方的热区（手势模式）
-      if (isActive && !isMouseCursorEnabled) {
-        checkHotspotHover(x, y);
-      }
+      loop();
     }
 
-    function hideCursor() {
-      const cursor = document.getElementById('gesture-cursor');
-      if (cursor) cursor.classList.remove('visible');
-    }
-
-    function checkHotspotHover(x, y) {
-      const elements = document.elementsFromPoint(x, y);
-      const hotspot = elements.find(el => el.closest('.hotspot'));
-    }
-  
-    /* ========== P2: 挥手翻页 ========== */
-    function detectSwipe(currentX) {
-      const now = Date.now();
-      if (now - lastSwipeTime < SWIPE_COOLDOWN) return;
-  
-      swipeBuffer.push({ x: currentX, time: now });
-  
-      // 保留最近500ms的数据
-      swipeBuffer = swipeBuffer.filter(p => now - p.time < 500);
-  
-      if (swipeBuffer.length < 5) return;
-  
-      const first = swipeBuffer[0];
-      const last = swipeBuffer[swipeBuffer.length - 1];
-      const dx = last.x - first.x;
-  
-      if (Math.abs(dx) > SWIPE_THRESHOLD) {
-        lastSwipeTime = now;
-        swipeBuffer = [];
-  
-        if (dx > 0) {
-          Scenes.next();
-          showSwipeHint('right', '→ 下一时辰');
-        } else {
-          Scenes.prev();
-          showSwipeHint('left', '← 上一时辰');
-        }
-      }
-    }
-  
-    /* ========== P3: 抓取手势 ========== */
-    function detectGrab(landmarks) {
-      // 计算指尖到掌心的平均距离
-      const palm = landmarks[0]; // 手腕
-      const tips = [landmarks[4], landmarks[8], landmarks[12], landmarks[16], landmarks[20]];
-      const midJoints = [landmarks[3], landmarks[6], landmarks[10], landmarks[14], landmarks[18]];
-  
-      // 判断手指是否弯曲（指尖比中间关节更靠近掌心）
-      let closedFingers = 0;
-      for (let i = 1; i < 5; i++) { // 跳过拇指
-        const tipDist = distance(tips[i], palm);
-        const midDist = distance(midJoints[i], palm);
-        if (tipDist < midDist) closedFingers++;
-      }
-  
-      const cursor = document.getElementById('gesture-cursor');
-      const isNowGrabbing = closedFingers >= 3;
-  
-      if (isNowGrabbing && !isGrabbing) {
-        // 开始抓取
-        isGrabbing = true;
-        grabStartTime = Date.now();
-        if (cursor) cursor.classList.add('grabbing');
-      } else if (!isNowGrabbing && isGrabbing) {
-        // 松开
-        isGrabbing = false;
-        if (cursor) cursor.classList.remove('grabbing');
-      }
-  
-      // 抓取持续足够时间 → 触发点击
-      if (isGrabbing && Date.now() - grabStartTime > GRAB_HOLD_TIME) {
-        isGrabbing = false;
-        grabStartTime = 0;
-        if (cursor) cursor.classList.remove('grabbing');
-  
-        // 模拟点击当前光标位置
-        triggerClickAtCursor();
-      }
-    }
-  
-    function distance(a, b) {
-      return Math.sqrt(
-        Math.pow(a.x - b.x, 2) +
-        Math.pow(a.y - b.y, 2) +
-        Math.pow((a.z || 0) - (b.z || 0), 2)
-      );
-    }
-  
-    function triggerClickAtCursor() {
-      const cursor = document.getElementById('gesture-cursor');
-      if (!cursor) return;
-  
-      const x = parseFloat(cursor.style.left);
-      const y = parseFloat(cursor.style.top);
-  
-      // 查找光标下方的可点击元素
-      const elements = document.elementsFromPoint(x, y);
-      const clickable = elements.find(el =>
-        el.closest('.hotspot') ||
-        el.closest('.timeline-item') ||
-        el.closest('.card-close')
-      );
-  
-      if (clickable) {
-        const target = clickable.closest('.hotspot, .timeline-item, .card-close');
-        if (target) target.click();
-      }
-    }
-  
-    /* ========== 回退方案：无MediaPipe时的简化模式 ========== */
     function setupFallback() {
-      console.log('使用鼠标模拟手势模式');
-      // 鼠标移动时已由 animateCursor 处理，这里只需标记
-      isMouseCursorEnabled = true;
+      console.log('[Gesture] 使用鼠标模拟模式');
     }
 
-    function triggerClickAtCursor() {
-      const pos = getCursorPosition();
-      const x = pos.x;
-      const y = pos.y;
-
-      // 查找光标下方的可点击元素
-      const elements = document.elementsFromPoint(x, y);
-      const clickable = elements.find(el =>
-        el.closest('.hotspot') ||
-        el.closest('.timeline-item') ||
-        el.closest('.card-close') ||
-        el.closest('.scene')
-      );
-
-      if (clickable) {
-        const target = clickable.closest('.hotspot, .timeline-item, .card-close, .scene');
-        if (target) {
-          target.click();
-          showClickEffect(x, y);
-        }
-      }
-    }
-
-    // 点击效果
-    function showClickEffect(x, y) {
-      const cursor = document.getElementById('gesture-cursor');
-      if (!cursor) return;
-
-      // 添加点击动画 class
-      cursor.classList.add('clicking');
-      setTimeout(() => cursor.classList.remove('clicking'), 200);
-    }
-  
-    /* ========== UI 辅助 ========== */
-    function showStatus(text) {
-      const status = document.getElementById('gesture-status');
-      const label = status?.querySelector('.gesture-label');
-      if (label) label.textContent = text;
-      if (status) {
-        status.classList.add('visible');
-        setTimeout(() => status.classList.remove('visible'), 3000);
-      }
-    }
-  
-    function showSwipeHint(direction, text) {
-      // 创建临时提示
-      let hint = document.querySelector('.swipe-hint.' + direction);
-      if (!hint) {
-        hint = document.createElement('div');
-        hint.className = `swipe-hint ${direction}`;
-        document.getElementById('scenes-container')?.appendChild(hint);
-      }
-      hint.textContent = text;
-      hint.classList.add('show');
-      setTimeout(() => hint.classList.remove('show'), 800);
-    }
-  
-    /* ========== 开关控制 ========== */
+    // ─────────────────────────────────────────────
+    // 开关控制
+    // ─────────────────────────────────────────────
     async function toggle() {
       const btn = document.getElementById('gesture-toggle');
 
       if (isActive) {
-        // 关闭
         isActive = false;
         btn?.classList.remove('active');
-        hideCursor();
-        showStatus('手势控制已关闭');
-
-        // Stop camera
-        if (videoEl && videoEl.srcObject) {
-          videoEl.srcObject.getTracks().forEach(track => track.stop());
+        if (videoEl?.srcObject) {
+          videoEl.srcObject.getTracks().forEach(t => t.stop());
         }
-        if (handsCamera) {
-          handsCamera.stop();
-          handsCamera = null;
-        }
+        if (handsCamera) { handsCamera.stop(); handsCamera = null; }
         videoEl.style.display = 'none';
+        resetGestureState();
+        updateGestureStatus('手势控制已关闭');
       } else {
-        // 开启
-        const success = await startCamera();
-        if (success) {
+        const ok = await startCamera();
+        if (ok) {
           isActive = true;
           btn?.classList.add('active');
         }
       }
     }
 
+    // ─────────────────────────────────────────────
+    // 公开接口
+    // ─────────────────────────────────────────────
     return {
       init,
       toggle,
       isActive: () => isActive,
-      // 外部调用：通过程序触发挥手
-      triggerSwipe: (dir) => {
-        if (dir === 'left') Scenes.prev();
-        else Scenes.next();
-      }
+      // 外部通知：缩放值重置（场景切换时）
+      resetScale: () => { currentScale = 1; baseScale = 1; initialPinchDist = 0; }
     };
   })();

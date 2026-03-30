@@ -25,7 +25,7 @@
   
     /* ========== 切换场景 ========== */
     function goTo(index, direction) {
-      if (isTransitioning || index === currentIndex) return;
+      if (isTransitioning || isFrozen || index === currentIndex) return;
       if (index < 0 || index >= TOTAL_SCENES) return;
   
       isTransitioning = true;
@@ -46,6 +46,9 @@
           nextScene.classList.add('active');
           Timeline.setActive(index);
           currentIndex = index;
+
+          // 重置缩放
+          if (typeof Gesture !== 'undefined' && Gesture.resetScale) Gesture.resetScale();
   
           // 新场景内容入场动画重新触发
           const content = nextScene.querySelector('.scene-content');
@@ -98,12 +101,14 @@
     }
   
     function next() {
+      if (isTransitioning || isFrozen) return;
       if (currentIndex < TOTAL_SCENES - 1) {
         goTo(currentIndex + 1, 'left');
       }
     }
-  
+
     function prev() {
+      if (isTransitioning || isFrozen) return;
       if (currentIndex > 0) {
         goTo(currentIndex - 1, 'right');
       }
@@ -191,6 +196,27 @@
       }, { passive: false });
     }
   
+    // 冻结/解冻画面（握拳时）
+    let isFrozen = false;
+
+    function freeze(freeze) {
+      isFrozen = freeze;
+      const scenes = getScenes();
+      scenes.forEach(s => {
+        if (freeze) s.classList.add('frozen');
+        else s.classList.remove('frozen');
+      });
+    }
+
+    function applyZoom(scale) {
+      const container = document.getElementById('scenes-container');
+      if (!container) return;
+      const active = container.querySelector('.scene.active');
+      if (active) {
+        active.style.transform = `scale(${scale})`;
+      }
+    }
+
     /* ========== 公共接口 ========== */
     return {
       init,
@@ -198,6 +224,8 @@
       next,
       prev,
       getCurrent: () => currentIndex,
-      getTotal: () => TOTAL_SCENES
+      getTotal: () => TOTAL_SCENES,
+      freeze,
+      applyZoom
     };
   })();
