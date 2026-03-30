@@ -47,9 +47,15 @@
     let dwellX = 0, dwellY = 0;
     const DWELL_TIME = 600;       // 停留 600ms 触发点击
     const DWELL_MOVE_THRESHOLD = 25; // 移动超过 25px 重置计时
+    // 点击冷却：防止点击后立即重复触发
+    let lastClickTime = 0;
+    const CLICK_COOLDOWN = 1200;    // 两次点击至少间隔 1200ms
 
     // 点击效果动画
     let clickAnimTimeout = null;
+    // 防止 performClick 与原生 click 重复触发的标志
+    let gestureClickProcessed = false;
+    const GESTURE_CLICK_DEBOUNCE = 300; // 300ms 内忽略原生 click
 
     // CDN
     const MEDIAPIPE_HANDS_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js';
@@ -234,26 +240,35 @@
     }
 
     // ─────────────────────────────────────────────
-    // 推门手势检测回调
+    // 手势结果回调（MediaPipe Hands — 合并版本）
+    // 同时处理首页推门检测 + 主场景手势
     // ─────────────────────────────────────────────
     function onHandResults(results) {
+      // ── 首页推门检测 ──
       if (pushEnabled && !pushTriggered) {
         detectPushDoor(results);
       }
 
+      // ── 无手部时恢复默认 ──
       if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
         hideCursorUI();
         resetGestureState();
+        currentGesture = 'none';
         return;
       }
 
+      // ── 非手势激活模式（未开启摄像头）直接跳过 ──
       if (!isActive) return;
 
       showCursorUI();
       const lm = results.multiHandLandmarks[0];
+
+      // 更新光标到食指指尖位置（镜像）
       const indexTip = lm[8];
       targetX = (1 - indexTip.x) * window.innerWidth;
       targetY = indexTip.y * window.innerHeight;
+
+      // 检测当前手势类型并处理
       detectAndApplyGesture(lm);
     }
 
@@ -381,6 +396,9 @@
 
       // 鼠标点击
       document.addEventListener('click', (e) => {
+        // 如果是手势刚处理的点击（300ms 内），跳过
+        if (gestureClickProcessed) return;
+
         targetX = e.clientX;
         targetY = e.clientY;
         cursorX = e.clientX;
@@ -409,6 +427,7 @@
 
     // ─────────────────────────────────────────────
     // 光标动画循环（所有模式共用）
+    // 同时负责：位置插值 + 热区悬停反馈
     // ─────────────────────────────────────────────
     function animateCursor() {
       const smooth = currentGesture === 'fist' ? CURSOR_SMOOTH_FIST : CURSOR_SMOOTH;
@@ -422,31 +441,45 @@
         cursor.style.top  = cursorY + 'px';
       }
 
+      // 检测光标是否悬停在热区上，并触发 hover 反馈
+      detectHotspotHover(cursorX, cursorY);
+
       requestAnimationFrame(animateCursor);
     }
 
     // ─────────────────────────────────────────────
-    // 手势检测回调（MediaPipe Hands）
+    // 检测光标悬停热区 → 主动触发 CSS :hover 效果
+    // 由于使用了 pointer-events:none 的自定义光标，
+    // 原生 :hover 无法工作，需要 JS 模拟
     // ─────────────────────────────────────────────
-    function onHandResults(results) {
-      if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-        // 没有检测到手：恢复默认鼠标模式
-        hideCursorUI();
-        resetGestureState();
-        currentGesture = 'none';
-        return;
+    let lastHoveredEl = null;
+
+    function detectHotspotHover(x, y) {
+      const elements = document.elementsFromPoint(x, y);
+
+      // 支持热区 + 时间轴项 + AI助手按钮的 hover 反馈
+      const hotspotEl = elements.find(el => el.classList.contains('hotspot') || el.closest('.hotspot'));
+      const timelineEl = elements.find(el => el.classList.contains('timeline-item') || el.closest('.timeline-item'));
+      const aiBtnEl = elements.find(el =>
+        el.id === 'ast-send' || el.id === 'ast-mic' || el.id === 'ast-close' ||
+        el.closest('#ast-send') || el.closest('#ast-mic') || el.closest('#ast-close') ||
+        el.closest('.ast-send-btn') || el.closest('.ast-close-btn')
+      );
+
+      const targetEl = hotspotEl
+        ? (hotspotEl.classList.contains('hotspot') ? hotspotEl : hotspotEl.closest('.hotspot'))
+        : (timelineEl
+            ? (timelineEl.classList.contains('timeline-item') ? timelineEl : timelineEl.closest('.timeline-item'))
+            : (aiBtnEl ? (aiBtnEl.closest('.ast-send-btn, .ast-close-btn') || aiBtnEl) : null));
+
+      if (targetEl && targetEl !== lastHoveredEl) {
+        if (lastHoveredEl) lastHoveredEl.classList.remove('cursor-hover');
+        targetEl.classList.add('cursor-hover');
+        lastHoveredEl = targetEl;
+      } else if (!targetEl && lastHoveredEl) {
+        lastHoveredEl.classList.remove('cursor-hover');
+        lastHoveredEl = null;
       }
-
-      showCursorUI();
-      const lm = results.multiHandLandmarks[0];
-
-      // 更新光标到食指指尖位置
-      const indexTip = lm[8]; // 食指指尖
-      targetX = (1 - indexTip.x) * window.innerWidth;
-      targetY = indexTip.y * window.innerHeight;
-
-      // 检测当前手势类型
-      detectAndApplyGesture(lm);
     }
 
     // ─────────────────────────────────────────────
@@ -515,14 +548,10 @@
 
       // 捏合缩放判断：拇指 + 食指伸展且两指尖距离近
       const pinchDist = dist(thumbTip, indexTip);
-      const pinchThreshold = 0.07; // 归一化距离阈值
-
-      // 食指和中指伸展程度
       const isIndexExt = dist(lm[8], wrist) > dist(lm[5], wrist);
-      const isMiddleExt = dist(lm[12], wrist) > dist(lm[10], wrist);
+      const isThumbNearIndex = pinchDist < 0.10; // 阈值增大，防止误触发
 
-      // 捏合：拇指尖和食指尖距离很小
-      if (pinchDist < pinchThreshold && isIndexExt) {
+      if (isThumbNearIndex && isIndexExt) {
         return 'pinching';
       }
 
@@ -540,6 +569,12 @@
 
       // 重置 dwell 计时
       dwellStartTime = 0;
+
+      // 退出捏合时，重置缩放基准值，防止下次捏合时 scale 跳变
+      if (oldG === 'pinching') {
+        initialPinchDist = 0;
+        baseScale = currentScale;
+      }
 
       switch (newG) {
         case 'fist':
@@ -616,18 +651,22 @@
 
     // ─────────────────────────────────────────────
     // P2: 捏合 → 缩放场景
+    // 只有当拇指+食指当前仍然保持捏合姿势时才缩放
     // ─────────────────────────────────────────────
     function handlePinching(lm) {
       const thumbTip = lm[4];
       const indexTip = lm[8];
+      const currentDist = dist(thumbTip, indexTip);
+
+      // 当前帧两指距离仍然小于阈值，才认为是有效捏合
+      if (currentDist >= 0.10) return;
 
       if (initialPinchDist === 0) {
-        initialPinchDist = dist(thumbTip, indexTip);
+        initialPinchDist = currentDist;
         baseScale = currentScale;
         return;
       }
 
-      const currentDist = dist(thumbTip, indexTip);
       const ratio = currentDist / initialPinchDist;
       currentScale = Math.max(0.5, Math.min(3.0, baseScale * ratio));
 
@@ -650,16 +689,19 @@
       Scenes.freeze(false);
 
       const now = Date.now();
+      // 移动阈值内：允许微调光标但不算"移动"
       const moved = Math.hypot(targetX - dwellX, targetY - dwellY);
 
       if (moved > DWELL_MOVE_THRESHOLD) {
+        // 移动超出阈值：重置停留计时，并更新停留基准点
         dwellStartTime = now;
         dwellX = targetX;
         dwellY = targetY;
-      }
-
-      if (dwellStartTime > 0 && now - dwellStartTime >= DWELL_TIME) {
-        dwellStartTime = now; // 重置，防止重复触发
+      } else if (dwellStartTime > 0 && now - dwellStartTime >= DWELL_TIME && now - lastClickTime >= CLICK_COOLDOWN) {
+        // 停留足够时长且不在冷却期：触发点击
+        lastClickTime = now;
+        // 点击后重置计时，重新开始新一轮停留
+        dwellStartTime = now;
         performClick(targetX, targetY);
       }
     }
@@ -675,18 +717,35 @@
         clickAnimTimeout = setTimeout(() => cursor.classList.remove('clicking'), 300);
       }
 
+      // 标记本次手势点击，防止 300ms 内原生 click 重复触发
+      gestureClickProcessed = true;
+      setTimeout(() => { gestureClickProcessed = false; }, GESTURE_CLICK_DEBOUNCE);
+
       const elements = document.elementsFromPoint(x, y);
+
+      // 优先查找已知可交互元素
       const target = elements.find(el =>
         el.closest('.hotspot') ||
         el.closest('.timeline-item') ||
         el.closest('.card-close') ||
         el.closest('.scene') ||
         el.closest('#voice-assistant-trigger') ||
-        el.closest('#gesture-toggle')
+        el.closest('#gesture-toggle') ||
+        el.closest('#ast-send') ||
+        el.closest('#ast-mic') ||
+        el.closest('#ast-close')
       );
 
       if (target) {
-        const el = target.closest('.hotspot, .timeline-item, .card-close, .scene, #voice-assistant-trigger, #gesture-toggle, .ast-close-btn');
+        // 对于发送按钮：点击时先启用按钮，再触发点击
+        if (target.closest('#ast-send')) {
+          const btn = document.getElementById('ast-send');
+          if (btn && btn.disabled) btn.disabled = false;
+        }
+        // 直接对命中元素本身或其最近的交互祖先触发 click
+        const el = target.tagName === 'BUTTON' || target.tagName === 'INPUT'
+          ? target
+          : target.closest('button, input, [role="button"]');
         if (el) el.click();
       }
     }

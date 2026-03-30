@@ -172,7 +172,8 @@
     transition: transform var(--duration-fast) var(--ease-out);
   }
   
-  .hotspot:hover {
+  .hotspot:hover,
+  .hotspot.cursor-hover {
     transform: translate(-50%, -50%) scale(1.1);
   }
   
@@ -212,7 +213,8 @@
     text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8);
   }
   
-  .hotspot:hover .hotspot-label {
+  .hotspot:hover .hotspot-label,
+  .hotspot.cursor-hover .hotspot-label {
     opacity: 1;
     transform: translateY(0);
   }

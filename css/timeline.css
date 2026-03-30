@@ -75,11 +75,13 @@
   }
   
   /* Hover 效果 */
-  .timeline-item:hover {
+  .timeline-item:hover,
+  .timeline-item.cursor-hover {
     color: var(--paper-warm);
   }
-  
-  .timeline-item:hover::before {
+
+  .timeline-item:hover::before,
+  .timeline-item.cursor-hover::before {
     background: var(--ink-faint);
     transform: translateX(-50%) scale(1.5);
   }

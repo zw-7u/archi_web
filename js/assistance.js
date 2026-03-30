@@ -150,7 +150,7 @@ const CONFIG = {
     let pressTimer = null;
     let isLongPress = false;
     let pressStartTime = 0;
-  
+
     trigger.addEventListener('mousedown', () => {
       pressStartTime = Date.now();
       isLongPress = false;
@@ -160,7 +160,7 @@ const CONFIG = {
         startVoiceInput();
       }, 500);
     });
-  
+
     trigger.addEventListener('mouseup', (e) => {
       clearTimeout(pressTimer);
       e.preventDefault();
@@ -171,7 +171,7 @@ const CONFIG = {
       }
       isLongPress = false;
     });
-  
+
     trigger.addEventListener('mouseleave', () => {
       clearTimeout(pressTimer);
       if (isLongPress) {
@@ -179,7 +179,7 @@ const CONFIG = {
         isLongPress = false;
       }
     });
-  
+
     trigger.addEventListener('touchstart', (e) => {
       e.preventDefault();
       pressStartTime = Date.now();
@@ -190,7 +190,7 @@ const CONFIG = {
         startVoiceInput();
       }, 500);
     });
-  
+
     trigger.addEventListener('touchend', (e) => {
       e.preventDefault();
       clearTimeout(pressTimer);
@@ -200,6 +200,22 @@ const CONFIG = {
         togglePanel();
       }
       isLongPress = false;
+    });
+
+    // 发送按钮点击
+    sendBtn.addEventListener('click', handleSend);
+
+    // 输入框回车发送
+    textInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    });
+
+    // 关闭按钮点击
+    closeBtn.addEventListener('click', () => {
+      closePanel();
     });
   }
   
@@ -462,14 +478,17 @@ const CONFIG = {
       addMessage('assistant', reply);
       state.chatHistory.push({ role: 'assistant', content: reply });
       speak(reply);
+      state.isProcessing = false;
+      sendBtn.disabled = false;
+      setStatus('就绪');
     } catch (err) {
       removeTypingIndicator();
       addMessage('system', '抱歉，网络似乎出了点问题，请稍后再试');
       console.error('AI Error:', err);
+      state.isProcessing = false;
+      sendBtn.disabled = false;
+      setStatus('就绪');
     }
-  
-    state.isProcessing = false;
-    setStatus('就绪');
   }
   
   
