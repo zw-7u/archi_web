@@ -165,16 +165,29 @@
     }
   }
   
-  /* 首页装饰 - 四角印章纹样 */
+  /* 首页装饰 - 四角印章纹样（已禁用） */
   .landing::after {
-    content: '';
-    position: absolute;
-    top: 30px;
-    right: 30px;
-    width: 60px;
-    height: 60px;
-    border: 2px solid var(--vermilion);
-    opacity: 0.25;
-    animation: fadeIn 1s 2.5s forwards;
-    opacity: 0;
+    display: none;
+  }
+
+  /* 首页摄像头按钮入场动画 */
+  @keyframes landingBtnFadeIn {
+    from {
+      opacity: 0;
+      transform: translate(-50%, calc(50% + 60px));
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, calc(50% + 80px));
+    }
+  }
+
+  /* 推门预览窗淡入 */
+  #push-preview {
+    animation: none; /* 已在 JS 内联中用 fadeIn 关键帧 */
+  }
+
+  @keyframes pushPreviewFadeIn {
+    from { opacity: 0; }
+    to { opacity: 0.85; }
   }

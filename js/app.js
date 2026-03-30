@@ -57,6 +57,13 @@
         // 显示时间轴
         Timeline.show();
       }, 300);
+
+      // 清理首页推门手势（如有）
+      setTimeout(() => {
+        if (typeof Gesture !== 'undefined' && Gesture.resetPushDoor) {
+          Gesture.resetPushDoor();
+        }
+      }, 600);
   
       setTimeout(() => {
         // 添加导航提示

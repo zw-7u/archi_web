@@ -56,6 +56,16 @@
     const CAMERA_UTILS_URL    = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js';
 
     // ─────────────────────────────────────────────
+    // 首页推门手势状态
+    // ─────────────────────────────────────────────
+    let pushEnabled = false;         // 是否已开启摄像头（推门模式）
+    let pushTriggered = false;       // 推门是否已触发
+    let pushHandHistory = [];        // 手部位置历史（用于检测推门）
+    const PUSH_HISTORY_FRAMES = 18;  // 追踪最近 18 帧
+    let pushHintTimeout = null;
+    let pushDoorCallback = null;     // 推门成功后回调
+
+    // ─────────────────────────────────────────────
     // 初始化
     // ─────────────────────────────────────────────
     function init() {
@@ -71,6 +81,9 @@
       const toggleBtn = document.getElementById('gesture-toggle');
       if (toggleBtn) toggleBtn.addEventListener('click', toggle);
 
+      // 添加首页摄像头选择按钮
+      buildLandingCameraBtn();
+
       // 启用鼠标光标跟随模式
       initMouseCursor();
 
@@ -81,6 +94,271 @@
       animateCursor();
 
       console.log('[Gesture] 模块已初始化（鼠标跟随模式）');
+    }
+
+    // ─────────────────────────────────────────────
+    // 首页摄像头选择按钮
+    // ─────────────────────────────────────────────
+    function buildLandingCameraBtn() {
+      const landing = document.getElementById('landing');
+      if (!landing) return;
+
+      const btn = document.createElement('button');
+      btn.id = 'landing-camera-btn';
+      btn.className = 'landing-camera-btn';
+      btn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16">
+          <path d="M15 3a2 2 0 012 2v2a2 2 0 01-2 2H9a2 2 0 01-2-2V5a2 2 0 012-2h6zM9 7a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V9M12 14v7M8 18h8"/>
+        </svg>
+        <span>手势推门进入</span>
+      `;
+      btn.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, calc(50% + 80px));
+        z-index: 1010;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 22px;
+        background: rgba(26, 23, 20, 0.75);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(200, 168, 85, 0.35);
+        border-radius: 24px;
+        color: rgba(200, 168, 85, 0.8);
+        font-family: 'Noto Serif SC', serif;
+        font-size: 13px;
+        letter-spacing: 0.1em;
+        cursor: pointer;
+        opacity: 0;
+        animation: landingBtnFadeIn 1s ease-out 2.8s forwards;
+        transition: all 0.3s ease;
+      `;
+      btn.addEventListener('click', requestCameraAndPushDoor);
+      btn.addEventListener('mouseenter', () => {
+        btn.style.borderColor = 'rgba(200, 168, 85, 0.7)';
+        btn.style.color = '#c8a855';
+        btn.style.boxShadow = '0 0 16px rgba(200, 168, 85, 0.2)';
+      });
+      btn.addEventListener('mouseleave', () => {
+        btn.style.borderColor = 'rgba(200, 168, 85, 0.35)';
+        btn.style.color = 'rgba(200, 168, 85, 0.8)';
+        btn.style.boxShadow = 'none';
+      });
+      landing.appendChild(btn);
+    }
+
+    // ─────────────────────────────────────────────
+    // 请求摄像头并启用推门手势
+    // ─────────────────────────────────────────────
+    async function requestCameraAndPushDoor() {
+      const btn = document.getElementById('landing-camera-btn');
+      if (btn) {
+        btn.textContent = '正在启动摄像头...';
+        btn.disabled = true;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 640, height: 480, facingMode: 'user' }
+        });
+
+        // 隐藏按钮
+        if (btn) btn.style.display = 'none';
+
+        // 创建预览
+        const preview = document.createElement('div');
+        preview.id = 'push-preview';
+        preview.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          width: 180px;
+          height: 135px;
+          border: 1px solid rgba(200, 168, 85, 0.35);
+          border-radius: 6px;
+          overflow: hidden;
+          z-index: 1010;
+          animation: pushPreviewFadeIn 0.4s 0.3s ease forwards;
+          opacity: 0;
+          background: #000;
+        `;
+        const vid = document.createElement('video');
+        vid.srcObject = stream;
+        vid.autoplay = true;
+        vid.playsInline = true;
+        vid.muted = true;
+        vid.style.cssText = 'width:100%;height:100%;transform:scaleX(-1);opacity:0.5;';
+        preview.appendChild(vid);
+
+        // 提示文字
+        const hint = document.createElement('div');
+        hint.id = 'push-hint';
+        hint.style.cssText = `
+          position: absolute;
+          bottom: 6px;
+          left: 0; right: 0;
+          text-align: center;
+          font-size: 11px;
+          color: rgba(200, 168, 85, 0.8);
+          letter-spacing: 0.05em;
+          pointer-events: none;
+        `;
+        hint.textContent = '手掌推入 → 进入';
+        preview.appendChild(hint);
+        document.body.appendChild(preview);
+        await vid.play();
+
+        // 加载 MediaPipe
+        const loaded = await loadMediaPipe();
+        if (!loaded) throw new Error('MediaPipe failed');
+
+        // 启动推门检测
+        pushEnabled = true;
+        pushTriggered = false;
+        startManualFrameLoop();
+
+        if (pushHintTimeout) clearTimeout(pushHintTimeout);
+        pushHintTimeout = setTimeout(() => {
+          showPushHint('timeout');
+        }, 12000);
+
+      } catch (err) {
+        console.warn('[Gesture] 摄像头/手势启动失败:', err);
+        if (btn) {
+          btn.textContent = '摄像头不可用';
+          btn.disabled = false;
+        }
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // 推门手势检测回调
+    // ─────────────────────────────────────────────
+    function onHandResults(results) {
+      if (pushEnabled && !pushTriggered) {
+        detectPushDoor(results);
+      }
+
+      if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+        hideCursorUI();
+        resetGestureState();
+        return;
+      }
+
+      if (!isActive) return;
+
+      showCursorUI();
+      const lm = results.multiHandLandmarks[0];
+      const indexTip = lm[8];
+      targetX = (1 - indexTip.x) * window.innerWidth;
+      targetY = indexTip.y * window.innerHeight;
+      detectAndApplyGesture(lm);
+    }
+
+    // ─────────────────────────────────────────────
+    // 推门手势检测（首页专用）
+    // 检测：手掌从画面边缘向中心推进
+    // ─────────────────────────────────────────────
+    function detectPushDoor(results) {
+      if (!results.multiHandLandmarks) return;
+
+      const hands = results.multiHandLandmarks;
+      const now = Date.now();
+
+      for (const lm of hands) {
+        const wrist = lm[0];
+        const palm = lm[9];
+        const mirroredX = 1 - palm.x;
+
+        pushHandHistory.push({ x: mirroredX, y: palm.y, z: palm.z || 0, time: now });
+        if (pushHandHistory.length > PUSH_HISTORY_FRAMES) pushHandHistory.shift();
+
+        // 需要至少 10 帧数据
+        if (pushHandHistory.length < 10) continue;
+
+        const first = pushHandHistory[0];
+        const last = pushHandHistory[pushHandHistory.length - 1];
+        const dt = (now - first.time) / 1000;
+        if (dt < 0.3) continue;
+
+        // 检测从画面左侧向右推进（推门）
+        const dx = last.x - first.x;
+        const dy = last.y - first.y;
+
+        // 条件：手从左侧向右移动至少 25% 画面宽度，且有轻微前推（z < 0 表示靠近摄像头）
+        const enterFromSide = first.x < 0.4 && dx > 0.25;
+        const pushForward = (last.z || 0) < (first.z || 0) + 0.02;
+
+        if (enterFromSide && dx > 0.3) {
+          triggerPushDoor();
+          return;
+        }
+      }
+    }
+
+    function triggerPushDoor() {
+      if (pushTriggered) return;
+      pushTriggered = true;
+      pushEnabled = false;
+
+      if (pushHintTimeout) clearTimeout(pushHintTimeout);
+
+      // 关闭预览
+      const preview = document.getElementById('push-preview');
+      const hint = document.getElementById('push-hint');
+      if (hint) hint.textContent = '叩门而入';
+      if (preview) {
+        setTimeout(() => {
+          if (preview) preview.style.opacity = '0';
+          setTimeout(() => preview?.remove(), 400);
+        }, 300);
+      }
+
+      // 停止摄像头
+      if (videoEl?.srcObject) {
+        videoEl.srcObject.getTracks().forEach(t => t.stop());
+      }
+
+      // 触发进入
+      if (typeof Landing !== 'undefined' && Landing.dissolve) {
+        Landing.dissolve();
+      } else if (pushDoorCallback) {
+        pushDoorCallback();
+      }
+    }
+
+    function showPushHint(type) {
+      const hint = document.getElementById('push-hint');
+      if (!hint) return;
+      if (type === 'timeout') {
+        hint.textContent = '无检测到手势，请点击按钮进入';
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // 重置推门状态
+    // ─────────────────────────────────────────────
+    function resetPushDoor() {
+      pushEnabled = false;
+      pushTriggered = false;
+      pushHandHistory = [];
+      if (pushHintTimeout) clearTimeout(pushHintTimeout);
+
+      const preview = document.getElementById('push-preview');
+      if (preview) preview.remove();
+
+      const btn = document.getElementById('landing-camera-btn');
+      if (btn) {
+        btn.style.display = '';
+        btn.textContent = '手势推门进入';
+        btn.disabled = false;
+      }
+
+      if (videoEl?.srcObject) {
+        videoEl.srcObject.getTracks().forEach(t => t.stop());
+      }
     }
 
     // ─────────────────────────────────────────────
@@ -564,10 +842,10 @@
 
     function startManualFrameLoop() {
       const loop = async () => {
-        if (isActive && hands && videoEl.readyState >= 2) {
+        if ((isActive || pushEnabled) && hands && videoEl && videoEl.readyState >= 2) {
           try { await hands.send({ image: videoEl }); } catch {}
         }
-        if (isActive) requestAnimationFrame(loop);
+        if (isActive || pushEnabled) requestAnimationFrame(loop);
       };
       loop();
     }
@@ -608,7 +886,9 @@
       init,
       toggle,
       isActive: () => isActive,
-      // 外部通知：缩放值重置（场景切换时）
-      resetScale: () => { currentScale = 1; baseScale = 1; initialPinchDist = 0; }
+      resetScale: () => { currentScale = 1; baseScale = 1; initialPinchDist = 0; },
+      // 首页推门专用
+      resetPushDoor,
+      isPushActive: () => pushEnabled
     };
   })();
