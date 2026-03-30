@@ -3,13 +3,8 @@
    ========================================== */
 
 /* ---- 手势光标容器 ---- */
-#gesture-indicator {
-  /* 默认隐藏，Gesture.init() 会移除 hidden 类 */
-  /* 但 display:none 会被 body.mouse-cursor-active .gesture-cursor 的 opacity:1 覆盖 */
-}
-
 #gesture-indicator.hidden {
-  /* 保留此规则以便手势关闭时隐藏 */
+  display: none;
 }
 
 /* ---- 手势光标 ---- */
@@ -19,10 +14,10 @@
     height: 26px;
     border: 2px solid var(--gold);
     border-radius: 50%;
-    pointer-events: none; /* 关键：光标不拦截任何鼠标事件 */
+    pointer-events: none;
     z-index: 9000;
     transform: translate(-50%, -50%);
-    opacity: 0; /* 默认隐藏 */
+    opacity: 0;
     box-shadow:
         0 0 12px rgba(200, 168, 85, 0.3),
         0 0 24px rgba(200, 168, 85, 0.1);
@@ -34,12 +29,12 @@
         opacity 0.3s ease;
 }
 
-/* 鼠标模式 / 手掌滑动 → 始终显示 */
+/* 主场景显示光标（鼠标或摄像头激活时） */
 body.mouse-cursor-active .gesture-cursor {
     opacity: 1;
 }
 
-/* 也支持 JS 手动添加 .visible 类 */
+/* JS 手动控制 */
 .gesture-cursor.visible {
     opacity: 1 !important;
 }
@@ -89,8 +84,8 @@ body.mouse-cursor-active .gesture-cursor {
 
 /* 握拳：缩小，深色内核 */
 .gesture-cursor.fist {
-    width: 20px !important;
-    height: 20px !important;
+    width: 22px !important;
+    height: 22px !important;
     border-color: rgba(200, 168, 85, 0.5);
     background: rgba(200, 168, 85, 0.08);
     box-shadow:
@@ -105,8 +100,8 @@ body.mouse-cursor-active .gesture-cursor {
 
 /* 食指指向：尖锐、细小 */
 .gesture-cursor.pointing {
-    width: 14px !important;
-    height: 14px !important;
+    width: 18px !important;
+    height: 18px !important;
     border-color: rgba(90, 138, 106, 0.8);
     box-shadow:
         0 0 8px rgba(90, 138, 106, 0.4),
@@ -122,28 +117,6 @@ body.mouse-cursor-active .gesture-cursor {
     width: 30px;
     height: 30px;
     border-color: rgba(90, 138, 106, 0.15);
-}
-
-/* 捏合缩放：大圆环 */
-.gesture-cursor.pinching {
-    width: 34px !important;
-    height: 34px !important;
-    border-color: rgba(192, 60, 32, 0.7);
-    box-shadow:
-        0 0 16px rgba(192, 60, 32, 0.3),
-        0 0 32px rgba(192, 60, 32, 0.15);
-    background: rgba(192, 60, 32, 0.1);
-}
-.gesture-cursor.pinching::before {
-    width: 10px;
-    height: 10px;
-    background: var(--vermilion);
-    opacity: 1;
-}
-.gesture-cursor.pinching::after {
-    width: 50px;
-    height: 50px;
-    border-color: rgba(192, 60, 32, 0.2);
 }
 
 /* 点击动画 */
@@ -248,7 +221,7 @@ body.mouse-cursor-active .gesture-cursor {
     opacity: 1;
 }
 
-/* ---- 摄像头预览小窗 ---- */
+/* ---- 摄像头预览小窗（主场景） ---- */
 #camera-preview {
     position: fixed;
     bottom: 90px;
@@ -258,11 +231,7 @@ body.mouse-cursor-active .gesture-cursor {
     border: 1px solid rgba(74, 66, 54, 0.6);
     border-radius: 6px;
     z-index: 9998;
-    opacity: 0;
+    opacity: 0.4;
     transform: scaleX(-1);
     display: none;
-}
-
-#camera-preview.visible {
-    opacity: 0.4;
 }

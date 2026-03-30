@@ -10,21 +10,13 @@
       // 1. 初始化首页粒子场景
       Landing.init();
   
-      // 2. 绑定"进入"按钮
-      const enterBtn = document.getElementById('enter-btn');
-      if (enterBtn) {
-        enterBtn.addEventListener('click', () => {
+      // 2. 空格键进入（或摄像头推门成功时 Landing.dissolve() 被调用）
+      document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && !hasEntered) {
+          e.preventDefault();
           Landing.dissolve();
-        });
-  
-        // 空格键也可进入
-        document.addEventListener('keydown', (e) => {
-          if (e.code === 'Space' && !hasEntered) {
-            e.preventDefault();
-            Landing.dissolve();
-          }
-        });
-      }
+        }
+      });
   
       // 3. 语言切换功能由 I18N 模块处理 (i18n.js)
 

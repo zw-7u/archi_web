@@ -47,9 +47,6 @@
           Timeline.setActive(index);
           currentIndex = index;
 
-          // 重置缩放
-          if (typeof Gesture !== 'undefined' && Gesture.resetScale) Gesture.resetScale();
-  
           // 新场景内容入场动画重新触发
           const content = nextScene.querySelector('.scene-content');
           if (content) {
@@ -57,7 +54,7 @@
             content.offsetHeight; // 强制重排
             content.style.animation = '';
           }
-  
+
           setTimeout(() => { isTransitioning = false; }, 400);
         });
       } else {
@@ -208,15 +205,6 @@
       });
     }
 
-    function applyZoom(scale) {
-      const container = document.getElementById('scenes-container');
-      if (!container) return;
-      const active = container.querySelector('.scene.active');
-      if (active) {
-        active.style.transform = `scale(${scale})`;
-      }
-    }
-
     /* ========== 公共接口 ========== */
     return {
       init,
@@ -225,7 +213,6 @@
       prev,
       getCurrent: () => currentIndex,
       getTotal: () => TOTAL_SCENES,
-      freeze,
-      applyZoom
+      freeze
     };
   })();
