@@ -47,6 +47,13 @@
     </div>
   </div>
 
+  <!-- 手势摄像头开关（固定左上角，首页和主场景都显示） -->
+  <button id="gesture-toggle" class="gesture-toggle" title="开启/关闭手势控制">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22">
+      <path d="M15 3a2 2 0 012 2v2a2 2 0 01-2 2M9 3a2 2 0 00-2 2v2a2 2 0 002 2M12 14v7M8 18h8M7 9v3a5 5 0 0010 0V9"/>
+    </svg>
+  </button>
+
   <!-- ==================== 主内容区：时辰场景 ==================== -->
   <main id="scenes-container" class="scenes-container hidden">
 
@@ -228,13 +235,6 @@
         <p class="card-text" id="card-text">详细介绍内容……</p>
       </div>
     </div>
-
-    <!-- ==================== 摄像头手势开关 ==================== -->
-    <button id="gesture-toggle" class="gesture-toggle" title="开启/关闭手势控制">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22">
-        <path d="M15 3a2 2 0 012 2v2a2 2 0 01-2 2M9 3a2 2 0 00-2 2v2a2 2 0 002 2M12 14v7M8 18h8M7 9v3a5 5 0 0010 0V9"/>
-      </svg>
-    </button>
 
     <!-- ==================== AI问答工具占位区（右下角） ==================== -->
     <!-- 悬浮按钮 -->

@@ -89,15 +89,17 @@
       const landing = document.getElementById('landing');
       if (!landing) return;
 
-      // 只保留中央文字+光圈提示（摄像头由左上角 gesture-toggle 统一控制）
-      const hint = document.createElement('div');
-      hint.id = 'landing-push-hint';
-      hint.innerHTML = `
-        <div class="push-hint-circle"></div>
-        <div class="push-hint-text">将手掌推入<br><span>即可进入</span></div>
-      `;
-      landing.appendChild(hint);
-    }
+    // 只保留中央文字+光圈提示（摄像头由左上角 gesture-toggle 统一控制，光圈可点击进入）
+    const hint = document.createElement('div');
+    hint.id = 'landing-push-hint';
+    hint.style.cssText = 'cursor: pointer; pointer-events: all;';
+    hint.innerHTML = `
+      <div class="push-hint-circle"></div>
+      <div class="push-hint-text">将手掌推入<br><span>点击亦可进入</span></div>
+    `;
+    hint.addEventListener('click', () => Gesture.toggle());
+    landing.appendChild(hint);
+  }
 
     // ─────────────────────────────────────────────
     // 请求摄像头并推门（首页由 gesture-toggle 触发）
