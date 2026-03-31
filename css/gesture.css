@@ -2,9 +2,22 @@
    手势交互 · 光标 & 状态指示器
    ========================================== */
 
-/* ---- 手势光标容器 ---- */
-#gesture-indicator.hidden {
-  display: none;
+/* 手势光标容器：不设 display:none，否则金色光标无法显示（光标为 fixed 子元素） */
+#gesture-indicator {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8999;
+}
+
+/* 未进入主流程前隐藏金色光标（由 app.js 在进入场景时添加 .app-in-scenes） */
+body:not(.app-in-scenes) .gesture-cursor {
+  opacity: 0 !important;
+  visibility: hidden;
+}
+
+body.app-in-scenes .gesture-cursor {
+  visibility: visible;
 }
 
 /* ---- 手势光标 ---- */

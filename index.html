@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>故宫十二时辰</title>
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/landing.css">
@@ -37,6 +37,15 @@
     <!-- 粒子消散遮罩 -->
     <div id="dissolve-overlay" class="dissolve-overlay"></div>
   </section>
+
+  <!-- 手势光标在 main 外，避免 .hidden 时整块不渲染导致无光标 -->
+  <div id="gesture-indicator" class="gesture-indicator">
+    <div class="gesture-cursor" id="gesture-cursor"></div>
+    <div class="gesture-status" id="gesture-status">
+      <span class="gesture-icon">✋</span>
+      <span class="gesture-label">手势控制已开启</span>
+    </div>
+  </div>
 
   <!-- ==================== 主内容区：时辰场景 ==================== -->
   <main id="scenes-container" class="scenes-container hidden">
@@ -221,15 +230,6 @@
         </div>
         <h3 class="card-title" id="card-title">标题</h3>
         <p class="card-text" id="card-text">详细介绍内容……</p>
-      </div>
-    </div>
-
-    <!-- ==================== 手势状态指示器 ==================== -->
-    <div id="gesture-indicator" class="gesture-indicator hidden">
-      <div class="gesture-cursor" id="gesture-cursor"></div>
-      <div class="gesture-status" id="gesture-status">
-        <span class="gesture-icon">✋</span>
-        <span class="gesture-label">手势控制已开启</span>
       </div>
     </div>
 

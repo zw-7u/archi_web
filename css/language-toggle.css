@@ -11,15 +11,22 @@
   font-family: 'Noto Serif SC', serif;
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
   backdrop-filter: blur(10px);
+  -webkit-backface-visibility: hidden;
+  outline: none;
+  box-shadow: none;
 }
 
 .language-toggle:hover {
   background: rgba(200, 168, 85, 0.2);
   border-color: #c8a855;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(200, 168, 85, 0.3);
+  box-shadow: 0 2px 8px rgba(200, 168, 85, 0.2);
+}
+
+.language-toggle:focus-visible {
+  outline: 2px solid rgba(200, 168, 85, 0.5);
+  outline-offset: 2px;
 }
 
 .language-toggle:active {
@@ -39,7 +46,7 @@
   box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
 }
 
-/* 手势切换按钮与语言切换分离 */
+/* 手势切换按钮与语言切换分离（主场景） */
 .gesture-toggle {
   position: fixed;
   top: 70px;

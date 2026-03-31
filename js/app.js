@@ -38,10 +38,12 @@
     function enterScenes() {
       if (hasEntered) return;
       hasEntered = true;
-  
+
+      document.body.classList.add('app-in-scenes');
+
       const container = document.getElementById('scenes-container');
       if (!container) return;
-  
+
       container.classList.remove('hidden');
   
       // 分步骤入场动画

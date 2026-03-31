@@ -13,6 +13,9 @@
     let mediaPipeLoaded = false;
     let isInitializing = false;
     let cameraStream = null;     // 记录当前摄像头流，便于关闭
+    let pushVideoEl = null;      // 首页推门预览内的 <video>，MediaPipe 取帧用
+    let handoffCameraToMain = false; // 推门进入后主场景继续用同一路摄像头
+    let manualLoopRunning = false;
 
     // ---- 手势状态机 ----
     // 'none' | 'swiping' | 'fist' | 'pointing'
@@ -137,7 +140,7 @@
 
         pushEnabled = true;
         pushTriggered = false;
-        startManualFrameLoop();
+        // loadMediaPipe → setupHands 内会启动帧循环
 
       } catch (err) {
         console.warn('[Gesture] 摄像头/手势启动失败:', err);
@@ -160,8 +163,9 @@
       preview.id = 'push-preview';
       preview.style.cssText = `
         position: fixed;
-        top: 20px;
-        right: 20px;
+        top: 72px;
+        left: 20px;
+        right: auto;
         width: 180px;
         height: 135px;
         border: 1px solid rgba(200, 168, 85, 0.35);
@@ -203,6 +207,7 @@
       label.id = 'push-hint';
       preview.appendChild(label);
 
+      pushVideoEl = vid;
       document.body.appendChild(preview);
     }
 
@@ -219,6 +224,7 @@
 
       const preview = document.getElementById('push-preview');
       if (preview) preview.remove();
+      pushVideoEl = null;
 
       // 恢复中央文字提示和摄像头按钮
       const hint = document.getElementById('landing-push-hint');
@@ -292,26 +298,43 @@
     function triggerPushDoor() {
       if (pushTriggered) return;
       pushTriggered = true;
-      pushEnabled = false;
 
       if (pushHintTimeout) clearTimeout(pushHintTimeout);
 
       const hint = document.getElementById('push-hint');
       if (hint) hint.textContent = '叩门而入';
 
+      // 不停止摄像头：将流交给主场景 videoEl，推门进入后仍可手势操作
+      if (cameraStream && videoEl) {
+        videoEl.srcObject = cameraStream;
+        videoEl.style.display = 'block';
+        videoEl.style.opacity = '0.4';
+        videoEl.style.zIndex = '9998';
+        videoEl.play().catch(() => {});
+      }
+
+      if (handsCamera) {
+        handsCamera.stop();
+        handsCamera = null;
+      }
+
+      // 先开启主场景手势再关 push，避免 rAF 循环中途停下
+      isActive = true;
+      pushEnabled = false;
+      pushVideoEl = null;
+
+      handoffCameraToMain = true;
+      document.getElementById('gesture-toggle')?.classList.add('active');
+      updateGestureStatus('手势控制已开启');
+
       setTimeout(() => {
         const preview = document.getElementById('push-preview');
         if (preview) {
           preview.style.transition = 'opacity 0.4s';
           preview.style.opacity = '0';
-          setTimeout(() => preview.remove(), 400);
+          setTimeout(() => preview?.remove(), 400);
         }
       }, 300);
-
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(t => t.stop());
-        cameraStream = null;
-      }
 
       if (typeof Landing !== 'undefined' && Landing.dissolve) {
         Landing.dissolve();
@@ -716,6 +739,10 @@
     function setupHands() {
       if (typeof window.Hands === 'undefined') { setupFallback(); return; }
 
+      if (hands && typeof hands.close === 'function') {
+        try { hands.close(); } catch (e) {}
+      }
+
       hands = new window.Hands({
         locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${file}`
       });
@@ -729,28 +756,37 @@
 
       hands.onResults(onHandResults);
 
-      if (typeof window.Camera === 'undefined') {
-        startManualFrameLoop();
-        return;
+      if (handsCamera) {
+        handsCamera.stop();
+        handsCamera = null;
       }
 
-      handsCamera = new window.Camera(videoEl, {
-        onFrame: async () => {
-          if (isActive && hands) await hands.send({ image: videoEl });
-        },
-        width: 640, height: 480
-      });
-      handsCamera.start();
+      // 统一用手动 rAF 循环：首页用 push 预览 video，主场景用 videoEl
+      startManualFrameLoop();
+    }
+
+    function getHandFrameSource() {
+      if (pushEnabled && pushVideoEl && pushVideoEl.readyState >= 2) return pushVideoEl;
+      if (isActive && videoEl && videoEl.readyState >= 2) return videoEl;
+      return null;
     }
 
     function startManualFrameLoop() {
-      const loop = async () => {
-        if ((isActive || pushEnabled) && hands && videoEl && videoEl.readyState >= 2) {
-          try { await hands.send({ image: videoEl }); } catch {}
+      if (manualLoopRunning) return;
+      manualLoopRunning = true;
+
+      const tick = async () => {
+        const feed = getHandFrameSource();
+        if ((isActive || pushEnabled) && hands && feed) {
+          try { await hands.send({ image: feed }); } catch {}
         }
-        if (isActive || pushEnabled) requestAnimationFrame(loop);
+        if (isActive || pushEnabled) {
+          requestAnimationFrame(tick);
+        } else {
+          manualLoopRunning = false;
+        }
       };
-      loop();
+      requestAnimationFrame(tick);
     }
 
     function setupFallback() {
@@ -790,6 +826,7 @@
       pushEnabled = false;
       pushTriggered = false;
       pushHandHistory = [];
+      pushVideoEl = null;
       if (pushHintTimeout) clearTimeout(pushHintTimeout);
 
       const preview = document.getElementById('push-preview');
@@ -800,6 +837,12 @@
 
       const camBtn = document.getElementById('landing-camera-btn');
       if (camBtn) camBtn.style.display = 'none';
+
+      // 推门进入且已把流交给主场景时，不要在这里关掉摄像头
+      if (handoffCameraToMain) {
+        handoffCameraToMain = false;
+        return;
+      }
 
       if (cameraStream) {
         cameraStream.getTracks().forEach(t => t.stop());

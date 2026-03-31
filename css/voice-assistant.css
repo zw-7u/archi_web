@@ -395,18 +395,109 @@ body.mouse-cursor-active .ast-close-btn:hover {
 .ast-corner.bl { bottom: 6px; left: 6px; border-width: 0 0 2px 2px; }
 .ast-corner.br { bottom: 6px; right: 6px; border-width: 0 2px 2px 0; }
 
-/* Mobile Responsive */
-@media (max-width: 480px) {
+/* Mobile / 小屏与虚拟键盘适配 */
+@media (max-width: 768px) {
   #voice-assistant-panel {
-    width: calc(100vw - 20px);
+    left: 10px;
     right: 10px;
-    bottom: 100px;
-    max-height: 70vh;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    max-width: none;
+    max-height: min(52dvh, 360px);
+    border-radius: 12px;
+    transform-origin: bottom center;
   }
+
+  #voice-assistant-panel.show {
+    transform: translateY(0) scale(1);
+  }
+
   #voice-assistant-trigger {
-    bottom: 20px;
-    right: 20px;
-    width: 56px;
-    height: 56px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    right: calc(16px + env(safe-area-inset-right, 0px));
+    width: 52px;
+    height: 52px;
+  }
+
+  #voice-assistant-trigger svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .ast-chat-area {
+    min-height: 120px;
+    max-height: min(28dvh, 220px);
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .ast-msg {
+    max-width: 92%;
+    padding: 8px 12px;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .ast-suggest-btn {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .ast-header {
+    padding: 10px 14px;
+    gap: 8px;
+  }
+
+  .ast-header-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .ast-header-title {
+    font-size: 14px;
+    letter-spacing: 1px;
+  }
+
+  .ast-header-status {
+    font-size: 11px;
+  }
+
+  .ast-input-area {
+    padding: 8px 10px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  /* 16px 避免 iOS 聚焦输入框时整页放大 */
+  .ast-text-input {
+    flex: 1 1 100%;
+    min-width: 0;
+    padding: 8px 12px;
+    font-size: 16px;
+    border-radius: 8px;
+  }
+
+  .ast-voice-btn,
+  .ast-send-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .ast-corner {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (max-width: 380px) {
+  #voice-assistant-panel {
+    max-height: min(48dvh, 320px);
+    left: 8px;
+    right: 8px;
+  }
+
+  .ast-chat-area {
+    max-height: min(24dvh, 180px);
   }
 }
