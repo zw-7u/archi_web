@@ -403,16 +403,19 @@
     function classifyGesture(lm) {
       const wrist = lm[0];
 
-      const isIndexClosed   = dist(lm[8],  wrist) < dist(lm[6],  wrist) * 1.1;
-      const isMiddleClosed = dist(lm[12], wrist) < dist(lm[10], wrist) * 1.1;
-      const isRingClosed   = dist(lm[16], wrist) < dist(lm[14], wrist) * 1.1;
-      const isPinkyClosed  = dist(lm[20], wrist) < dist(lm[18], wrist) * 1.1;
+      // 统一以手腕为基准比较手指伸直程度
+      const idx = dist(lm[8],  wrist);  // 食指指尖到手腕
+      const mid = dist(lm[12], wrist);  // 中指指尖到手腕
+      const rng = dist(lm[16], wrist);  // 无名指指尖到手腕
+      const pnk = dist(lm[20], wrist);  // 小指指尖到手腕
 
-      if (isIndexClosed && isMiddleClosed && isRingClosed && isPinkyClosed) {
-        const isIndexExtended = dist(lm[8], wrist) > dist(lm[5], wrist) * 1.2;
-        return isIndexExtended ? 'pointing' : 'fist';
+      // 食指明显比其他三指更伸出 → 指向
+      // 手掌滑动时五指齐伸，各指尖到手腕距离相近
+      if (idx > mid * 1.25 && idx > rng * 1.25 && idx > pnk * 1.25) {
+        return 'pointing';
       }
 
+      // 其余情况：握拳 or 手掌滑动，统一归为 swiping（左右滑动）
       return 'swiping';
     }
 
