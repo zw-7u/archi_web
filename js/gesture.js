@@ -16,10 +16,16 @@
     let cameraStream = null;
     let pushVideoEl = null;
     let manualLoopRunning = false;
+    let gestureStatusHideTimer = null;
 
     // ---- 手势状态机 ----
     let currentGesture = 'none';   // 'none' | 'swiping' | 'fist' | 'pointing'
     let prevGesture = 'none';
+
+    // ---- 手势分类防抖（连续 3 帧 raw 状态一致才更新稳定态）----
+    let stableHandState = 'palm'; // 'fist' | 'pointing' | 'palm' | 'unknown'
+    let debouncePending = null;
+    let debounceCount = 0;
 
     // ---- 光标位置 ----
     let targetX = window.innerWidth / 2;
@@ -60,6 +66,8 @@
       videoEl.id = 'camera-preview';
       videoEl.setAttribute('playsinline', '');
       videoEl.setAttribute('autoplay', '');
+      // 不拦截点击：否则 #camera-preview z-index 高于左下小窗，× 无法点到
+      videoEl.style.pointerEvents = 'none';
       document.body.appendChild(videoEl);
 
       const toggleBtn = document.getElementById('gesture-toggle');
@@ -107,6 +115,7 @@
         position: absolute;
         top: 0; left: 0;
         border-radius: 5px;
+        pointer-events: none;
       `;
       preview.appendChild(vid);
       pushVideoEl = vid;
@@ -137,15 +146,29 @@
       `;
       label.textContent = '手掌 ← → 切换 · 指向点击';
       preview.appendChild(label);
+      // 提示文案仅显示 1 秒后淡出
+      setTimeout(() => {
+        label.style.transition = 'opacity 0.35s ease';
+        label.style.opacity = '0';
+        setTimeout(() => label.remove(), 400);
+      }, 1000);
 
       document.body.appendChild(preview);
     }
 
-    // 关闭摄像头预览小窗（仅删除 UI，摄像头继续运行供手势追踪）
+    // 关闭摄像头预览小窗（仅删除 UI；完整关闭请用 deactivateGesture）
     function closeCameraPreview() {
       const preview = document.getElementById('push-preview');
       if (preview) preview.remove();
       pushVideoEl = null;
+    }
+
+    // 与右上角「关闭」一致：停流、关 MediaPipe、同步按钮态
+    function deactivateGesture() {
+      if (!isActive) return;
+      closeAll();
+      document.getElementById('gesture-toggle')?.classList.remove('active');
+      updateGestureStatus('手势控制已关闭');
     }
 
     // 关闭全部手势（含摄像头）
@@ -215,6 +238,8 @@
 
       document.addEventListener('click', (e) => {
         if (Gesture.isLandingVisible()) return;
+        // 主场景：勿对右上工具栏再 performClick，否则会二次 el.click() 导致 toggle 连点两次
+        if (e.target.closest('.top-toolbar')) return;
         if (gestureClickProcessed) return;
         targetX = e.clientX;
         targetY = e.clientY;
@@ -400,23 +425,72 @@
       }
     }
 
-    function classifyGesture(lm) {
-      const wrist = lm[0];
-
-      // 统一以手腕为基准比较手指伸直程度
-      const idx = dist(lm[8],  wrist);  // 食指指尖到手腕
-      const mid = dist(lm[12], wrist);  // 中指指尖到手腕
-      const rng = dist(lm[16], wrist);  // 无名指指尖到手腕
-      const pnk = dist(lm[20], wrist);  // 小指指尖到手腕
-
-      // 食指明显比其他三指更伸出 → 指向
-      // 手掌滑动时五指齐伸，各指尖到手腕距离相近
-      if (idx > mid * 1.25 && idx > rng * 1.25 && idx > pnk * 1.25) {
-        return 'pointing';
+    /**
+     * 基于 MediaPipe Hands 21 点判定单帧手势（无防抖）。
+     * @param {Array<{x:number,y:number,z?:number}>} landmarks
+     * @returns {{ state: 'fist'|'pointing'|'palm'|'unknown', fingers: boolean[] }}
+     *   fingers 顺序：[thumb, index, middle, ring, pinky]
+     */
+    function detectHandState(landmarks) {
+      if (!landmarks || landmarks.length < 21) {
+        return { state: 'unknown', fingers: [false, false, false, false, false] };
       }
+      const wrist = landmarks[0];
+      const pinkyMcp = landmarks[17];
 
-      // 其余情况：握拳 or 手掌滑动，统一归为 swiping（左右滑动）
+      const indexExt = dist(landmarks[8], wrist) > dist(landmarks[6], wrist);
+      const middleExt = dist(landmarks[12], wrist) > dist(landmarks[10], wrist);
+      const ringExt = dist(landmarks[16], wrist) > dist(landmarks[14], wrist);
+      const pinkyExt = dist(landmarks[20], wrist) > dist(landmarks[18], wrist);
+      const thumbExt = dist(landmarks[4], pinkyMcp) > dist(landmarks[3], pinkyMcp);
+
+      const fingers = [thumbExt, indexExt, middleExt, ringExt, pinkyExt];
+      const nExt = fingers.filter(Boolean).length;
+
+      const allBent = !thumbExt && !indexExt && !middleExt && !ringExt && !pinkyExt;
+      if (allBent) {
+        return { state: 'fist', fingers };
+      }
+      if (indexExt && !middleExt && !ringExt && !pinkyExt && !thumbExt) {
+        return { state: 'pointing', fingers };
+      }
+      if (nExt >= 4) {
+        return { state: 'palm', fingers };
+      }
+      return { state: 'unknown', fingers };
+    }
+
+    function applyStableHandState(rawState) {
+      if (rawState === stableHandState) {
+        debouncePending = null;
+        debounceCount = 0;
+        return stableHandState;
+      }
+      if (rawState === debouncePending) {
+        debounceCount++;
+      } else {
+        debouncePending = rawState;
+        debounceCount = 1;
+      }
+      if (debounceCount >= 3) {
+        stableHandState = rawState;
+        debouncePending = null;
+        debounceCount = 0;
+      }
+      return stableHandState;
+    }
+
+    function mapStableStateToGesture(stable) {
+      if (stable === 'fist') return 'fist';
+      if (stable === 'pointing') return 'pointing';
+      if (stable === 'palm') return 'swiping';
       return 'swiping';
+    }
+
+    function classifyGesture(lm) {
+      const { state: raw } = detectHandState(lm);
+      const stable = applyStableHandState(raw);
+      return mapStableStateToGesture(stable);
     }
 
     function onGestureChange(newG, oldG) {
@@ -554,6 +628,9 @@
       dwellStartTs = 0;
       currentGesture = 'none';
       prevGesture = 'none';
+      stableHandState = 'palm';
+      debouncePending = null;
+      debounceCount = 0;
       const cursor = document.getElementById('gesture-cursor');
       if (cursor) {
         cursor.classList.remove('fist', 'pointing', 'clicking', 'dwell-active');
@@ -567,6 +644,11 @@
       const label = status?.querySelector('.gesture-label');
       if (label) label.textContent = text;
       if (status) status.classList.add('visible');
+      if (gestureStatusHideTimer) clearTimeout(gestureStatusHideTimer);
+      gestureStatusHideTimer = setTimeout(() => {
+        gestureStatusHideTimer = null;
+        document.getElementById('gesture-status')?.classList.remove('visible');
+      }, 1000);
     }
 
     function showSwipeHint(direction) {
@@ -598,6 +680,7 @@
         videoEl.style.display = 'block';
         videoEl.style.opacity = '0.4';
         videoEl.style.zIndex = '9998';
+        videoEl.style.pointerEvents = 'none';
 
         await new Promise((resolve) => {
           videoEl.onloadedmetadata = () => {
@@ -719,9 +802,7 @@
 
       if (currentlyActive) {
         // 已开启 → 关闭摄像头
-        closeAll();
-        document.getElementById('gesture-toggle')?.classList.remove('active');
-        updateGestureStatus('手势控制已关闭');
+        deactivateGesture();
       } else {
         // 未开启 → 开启摄像头
         const ok = await startCamera();
@@ -754,6 +835,7 @@
         const l = document.getElementById('landing');
         return l && !l.classList.contains('gone') && l.style.display !== 'none';
       },
-      closeAll
+      closeAll,
+      detectHandState
     };
   })();
