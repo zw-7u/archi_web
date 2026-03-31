@@ -208,14 +208,10 @@
         <div class="timeline-progress" id="timeline-progress"></div>
       </div>
       <div class="timeline-items">
-        <button class="timeline-item active" data-index="0">卯</button>
-        <button class="timeline-item" data-index="1">辰</button>
-        <button class="timeline-item" data-index="2">巳</button>
-        <button class="timeline-item" data-index="3">午</button>
-        <button class="timeline-item" data-index="4">申</button>
-        <button class="timeline-item" data-index="5">酉</button>
-        <button class="timeline-item" data-index="6">戌</button>
-        <button class="timeline-item" data-index="7">亥</button>
+        <button class="timeline-item active" data-index="0">卯-辰</button>
+        <button class="timeline-item" data-index="2">巳-午</button>
+        <button class="timeline-item" data-index="4">申-酉</button>
+        <button class="timeline-item" data-index="6">戌-亥</button>
       </div>
     </nav>
 
@@ -261,6 +257,11 @@
           <div class="ast-header-status" id="ast-status">待命中</div>
         </div>
         <button class="ast-close-btn" id="ast-close">&times;</button>
+        <button class="ast-volume-btn active" id="ast-volume" title="朗读开关">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+          </svg>
+        </button>
       </div>
     
       <!-- Chat Messages -->

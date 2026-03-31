@@ -334,3 +334,6 @@ his-archi/
 ## License
 
 MIT License — feel free to use, modify, and distribute.
+
+$env:DASHSCOPE_API_KEY="sk-85e57a32c7f04078bc3e8225811086d4"
+node proxy-server.js

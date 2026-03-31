@@ -18,8 +18,9 @@ const CONFIG = {
   
     // ✏️ 语音合成设置
     ttsLang: 'zh-CN',
-    ttsRate: 1.0,
-    ttsPitch: 1.0,
+    ttsRate: 1.5,           // 1.5 倍速（比正常略快，更活泼）
+    ttsPitch: 1.05,        // 音调略高，更有活力
+    ttsVolume: 1.0,        // 默认音量
   
     // ✏️ 猜你想问：生成几个推荐问题
     suggestCount: 3,
@@ -81,6 +82,7 @@ const CONFIG = {
     synth: window.speechSynthesis,
     pageContent: '',
     wakeActivated: false,
+    ttsEnabled: true,      // 朗读开关（默认开启）
   };
   
   
@@ -96,6 +98,7 @@ const CONFIG = {
   const statusEl = $('ast-status');
   const nameEl = $('ast-name');
   const waveform = $('ast-waveform');
+  const volumeBtn = $('ast-volume');
   
   
   // ===== Initialize =====
@@ -216,6 +219,16 @@ const CONFIG = {
     // 关闭按钮点击
     closeBtn.addEventListener('click', () => {
       closePanel();
+    });
+
+    // 音量朗读开关
+    volumeBtn.addEventListener('click', () => {
+      state.ttsEnabled = !state.ttsEnabled;
+      volumeBtn.classList.toggle('active', state.ttsEnabled);
+      volumeBtn.title = state.ttsEnabled ? '朗读已开启' : '朗读已关闭';
+      if (!state.ttsEnabled && state.isSpeaking) {
+        stopSpeaking();
+      }
     });
   }
   
@@ -719,31 +732,89 @@ const CONFIG = {
   
   // ===== Text-to-Speech =====
   function speak(text) {
+    if (!state.ttsEnabled) return;
     stopSpeaking();
-    
+
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = CONFIG.ttsLang;
     utterance.rate = CONFIG.ttsRate;
     utterance.pitch = CONFIG.ttsPitch;
-  
-    // Try to find a Chinese voice
-    const voices = state.synth.getVoices();
-    const zhVoice = voices.find(v => v.lang.startsWith('zh'));
-    if (zhVoice) utterance.voice = zhVoice;
-  
+    utterance.volume = CONFIG.ttsVolume;
+
     utterance.onstart = () => {
       state.isSpeaking = true;
       setStatus('正在朗读...');
     };
-  
     utterance.onend = () => {
       state.isSpeaking = false;
       setStatus('就绪');
     };
-  
-    state.synth.speak(utterance);
+
+    // voices 可能尚未加载，等待 voiceschanged 事件后执行
+    const doSpeak = () => {
+      const voices = state.synth.getVoices();
+      if (voices.length > 0) {
+        const lively = selectLivelyVoice(voices);
+        if (lively) utterance.voice = lively;
+      }
+      state.synth.speak(utterance);
+    };
+
+    if (state.synth.getVoices().length > 0) {
+      doSpeak();
+    } else {
+      const handler = () => {
+        window.speechSynthesis.removeEventListener('voiceschanged', handler);
+        doSpeak();
+      };
+      window.speechSynthesis.addEventListener('voiceschanged', handler);
+      setTimeout(() => {
+        window.speechSynthesis.removeEventListener('voiceschanged', handler);
+        doSpeak();
+      }, 1000);
+    }
   }
-  
+
+  // 优先选"活泼轻快"声线：女声优先，带"活泼/轻快"关键字权重最高
+  function selectLivelyVoice(voices) {
+    if (!voices || voices.length === 0) return null;
+
+    const livelyKeywords = ['活泼', '轻快', 'young', 'lively'];
+    const neutralKeywords = ['Google 普通话', 'Mandarin', 'zh-CN', 'zh'];
+
+    let best = null;
+    let bestScore = -1;
+
+    for (const v of voices) {
+      if (!v.lang.startsWith('zh')) continue;
+      const lc = v.name.toLowerCase();
+      let score = 0;
+
+      // 活泼关键字加权最高
+      for (let i = 0; i < livelyKeywords.length; i++) {
+        if (lc.includes(livelyKeywords[i].toLowerCase())) {
+          score = (livelyKeywords.length - i) + 20;
+          break;
+        }
+      }
+      // 中性中文兜底
+      if (score === 0 && neutralKeywords.some(k => lc.includes(k.toLowerCase()))) {
+        score = 1;
+      }
+      // 女声加分（name 含 female/young/女 且不含 male/男）
+      const isFemale = (lc.includes('female') || lc.includes('young') || lc.includes('女声'))
+                       && !lc.includes('male') && !lc.includes('男声');
+      if (isFemale) score += 10;
+
+      if (score > bestScore) {
+        bestScore = score;
+        best = v;
+      }
+    }
+
+    return best;
+  }
+
   function stopSpeaking() {
     if (state.synth.speaking) {
       state.synth.cancel();

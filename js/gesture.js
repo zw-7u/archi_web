@@ -1,8 +1,9 @@
 /* ==========================================
    手势交互 · MediaPipe Hands
-   P1: 手掌左右滑动 → 切换时辰
-   P2: 握拳 → 画面冻结，光标跟随食指移动，停留触发点击
-   P3: 食指指向 → 光标跟随食指移动，停留触发悬停/点击
+   P1: 手掌滑动 → 切换时辰（仅手掌有效）
+   P2: 握拳 → 画面冻结，光标跟随移动
+   P3: 食指指向 → 停留2秒触发点击（含进度圈）
+   摄像头预览固定左下角；×仅关摄像头；右上开关完全关闭手势
    ========================================== */
 
   const Gesture = (() => {
@@ -12,17 +13,16 @@
     let videoEl = null;
     let mediaPipeLoaded = false;
     let isInitializing = false;
-    let cameraStream = null;     // 记录当前摄像头流，便于关闭
-    let pushVideoEl = null;      // 首页推门预览内的 <video>，MediaPipe 取帧用
-    let handoffCameraToMain = false; // 推门进入后主场景继续用同一路摄像头
+    let cameraStream = null;
+    let pushVideoEl = null;
+    let handoffCameraToMain = false;
     let manualLoopRunning = false;
 
     // ---- 手势状态机 ----
-    // 'none' | 'swiping' | 'fist' | 'pointing'
-    let currentGesture = 'none';
+    let currentGesture = 'none';   // 'none' | 'swiping' | 'fist' | 'pointing'
     let prevGesture = 'none';
 
-    // 光标位置（平滑插值）
+    // ---- 光标位置 ----
     let targetX = window.innerWidth / 2;
     let targetY = window.innerHeight / 2;
     let cursorX = targetX;
@@ -30,24 +30,21 @@
     const CURSOR_SMOOTH = 0.12;
     const CURSOR_SMOOTH_FIST = 0.25;
 
-    // 上一帧手掌位置（用于检测滑动方向）
+    // ---- 滑动检测（仅手掌有效） ----
     let prevPalmX = -1;
-    let prevPalmY = -1;
-
-    // 挥动检测
     let swipeBuffer = [];
-    let lastSwipeTime = 0;
     const SWIPE_THRESHOLD = 0.13;
 
-    // 握拳停留点击
-    let dwellStartTime = 0;
-    let dwellX = 0, dwellY = 0;
-    const DWELL_TIME = 600;
-    const DWELL_MOVE_THRESHOLD = 25;
-    let lastClickTime = 0;
+    // ---- 停留进度点击（2秒） ----
+    let dwellAnchorX = 0;
+    let dwellAnchorY = 0;
+    let dwellStartTs = 0;       // requestAnimationFrame 时间戳
+    const DWELL_MS = 2000;
+    const DWELL_MOVE_PX = 28;   // 移动超过 28px 重置计时
+    let lastClickTs = 0;
     const CLICK_COOLDOWN = 1200;
 
-    // 点击效果动画
+    // ---- 点击防抖 ----
     let clickAnimTimeout = null;
     let gestureClickProcessed = false;
     const GESTURE_CLICK_DEBOUNCE = 300;
@@ -57,7 +54,7 @@
     const CAMERA_UTILS_URL    = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js';
 
     // ─────────────────────────────────────────────
-    // 首页推门手势状态
+    // 首页推门
     // ─────────────────────────────────────────────
     let pushEnabled = false;
     let pushTriggered = false;
@@ -82,30 +79,17 @@
       initMouseCursor();
       animateCursor();
 
-      console.log('[Gesture] 模块已初始化（鼠标跟随模式）');
+      console.log('[Gesture] 模块已初始化');
     }
 
     // ─────────────────────────────────────────────
-    // 首页推门文字提示（非按钮）
+    // 首页推门提示
     // ─────────────────────────────────────────────
     function buildLandingPushHint() {
       const landing = document.getElementById('landing');
       if (!landing) return;
 
-      // 摄像头开关按钮（小的，用户可自由选择是否开启）
-      const camBtn = document.createElement('button');
-      camBtn.id = 'landing-camera-btn';
-      camBtn.className = 'landing-camera-btn';
-      camBtn.setAttribute('title', '开启手势推门');
-      camBtn.innerHTML = `
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16">
-          <path d="M15 3a2 2 0 012 2v2a2 2 0 01-2 2H9a2 2 0 01-2-2V5a2 2 0 012-2h6zM9 7a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V9M12 14v7M8 18h8"/>
-        </svg>
-      `;
-      camBtn.addEventListener('click', requestCameraAndPushDoor);
-      landing.appendChild(camBtn);
-
-      // 文字+光圈提示（中央）
+      // 只保留中央文字+光圈提示（摄像头由左上角 gesture-toggle 统一控制）
       const hint = document.createElement('div');
       hint.id = 'landing-push-hint';
       hint.innerHTML = `
@@ -116,20 +100,15 @@
     }
 
     // ─────────────────────────────────────────────
-    // 请求摄像头并启用推门手势
+    // 请求摄像头并推门（首页由 gesture-toggle 触发）
     // ─────────────────────────────────────────────
     async function requestCameraAndPushDoor() {
-      const camBtn = document.getElementById('landing-camera-btn');
-      if (camBtn) camBtn.disabled = true;
 
       try {
         cameraStream = await navigator.mediaDevices.getUserMedia({
           video: { width: 640, height: 480, facingMode: 'user' }
         });
 
-        if (camBtn) camBtn.style.display = 'none';
-
-        // 隐藏中央文字提示
         const hint = document.getElementById('landing-push-hint');
         if (hint) hint.style.display = 'none';
 
@@ -138,24 +117,21 @@
         const loaded = await loadMediaPipe();
         if (!loaded) throw new Error('MediaPipe failed');
 
-        pushEnabled = true;
-        pushTriggered = false;
-        // loadMediaPipe → setupHands 内会启动帧循环
+        // 首页状态：启用推门检测
+        if (Gesture.isLandingVisible()) {
+          pushEnabled = true;
+          pushTriggered = false;
+        }
 
       } catch (err) {
-        console.warn('[Gesture] 摄像头/手势启动失败:', err);
-        if (camBtn) {
-          camBtn.disabled = false;
-          camBtn.textContent = '摄像头不可用';
-        }
+        console.warn('[Gesture] 摄像头启动失败:', err);
       }
     }
 
     // ─────────────────────────────────────────────
-    // 创建摄像头预览小窗（可关闭）
+    // 摄像头预览小窗（固定左下角）
     // ─────────────────────────────────────────────
     function buildCameraPreview(stream) {
-      // 移除旧的
       const old = document.getElementById('push-preview');
       if (old) old.remove();
 
@@ -163,15 +139,16 @@
       preview.id = 'push-preview';
       preview.style.cssText = `
         position: fixed;
-        top: 72px;
+        bottom: 90px;
         left: 20px;
         right: auto;
+        top: auto;
         width: 180px;
         height: 135px;
         border: 1px solid rgba(200, 168, 85, 0.35);
         border-radius: 6px;
-        overflow: hidden;
-        z-index: 1010;
+        overflow: visible;
+        z-index: 9997;
         background: #000;
       `;
 
@@ -180,61 +157,89 @@
       vid.autoplay = true;
       vid.playsInline = true;
       vid.muted = true;
-      vid.style.cssText = 'width:100%;height:100%;transform:scaleX(-1);opacity:0.5;position:absolute;top:0;left:0;';
+      vid.style.cssText = `
+        width: 100%; height: 100%;
+        transform: scaleX(-1);
+        opacity: 0.45;
+        position: absolute;
+        top: 0; left: 0;
+        border-radius: 5px;
+      `;
       preview.appendChild(vid);
+      pushVideoEl = vid;
 
-      // 关闭按钮
+      // 关闭按钮（只关摄像头，不关手势）
       const closeBtn = document.createElement('button');
       closeBtn.className = 'push-preview-close';
       closeBtn.innerHTML = '&times;';
       closeBtn.title = '关闭摄像头';
-      closeBtn.addEventListener('click', closePushPreview);
+      closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeCameraPreview();
+      });
       preview.appendChild(closeBtn);
 
-      // 提示文字
+      // 手势提示
       const label = document.createElement('div');
       label.style.cssText = `
         position: absolute;
         bottom: 6px; left: 0; right: 0;
         text-align: center;
         font-size: 11px;
-        color: rgba(200, 168, 85, 0.8);
+        color: rgba(200, 168, 85, 0.75);
         letter-spacing: 0.05em;
         pointer-events: none;
         z-index: 1;
       `;
-      label.textContent = '手掌推入 → 进入';
-      label.id = 'push-hint';
+      label.textContent = '手掌 ← → 切换 · 指向点击';
       preview.appendChild(label);
 
-      pushVideoEl = vid;
       document.body.appendChild(preview);
     }
 
-    function closePushPreview() {
+    // 关闭摄像头预览（保留手势，隐藏 UI）
+    function closeCameraPreview() {
+      const preview = document.getElementById('push-preview');
+      if (preview) {
+        preview.style.transition = 'opacity 0.3s';
+        preview.style.opacity = '0';
+        setTimeout(() => preview?.remove(), 320);
+      }
+      pushVideoEl = null;
+
+      // 隐藏首页文字提示（推门已结束）
+      if (Gesture.isLandingVisible()) {
+        const hint = document.getElementById('landing-push-hint');
+        if (hint) hint.style.display = 'none';
+      }
+    }
+
+    // 关闭全部手势（含摄像头）
+    function closeAll() {
+      isActive = false;
       pushEnabled = false;
       pushTriggered = false;
       pushHandHistory = [];
+      handoffCameraToMain = false;
       if (pushHintTimeout) clearTimeout(pushHintTimeout);
 
       if (cameraStream) {
         cameraStream.getTracks().forEach(t => t.stop());
         cameraStream = null;
       }
+      if (handsCamera) { handsCamera.stop(); handsCamera = null; }
+
+      videoEl.style.display = 'none';
+      if (videoEl.srcObject) { videoEl.srcObject = null; }
 
       const preview = document.getElementById('push-preview');
       if (preview) preview.remove();
       pushVideoEl = null;
 
-      // 恢复中央文字提示和摄像头按钮
-      const hint = document.getElementById('landing-push-hint');
-      if (hint) hint.style.display = '';
-
-      const camBtn = document.getElementById('landing-camera-btn');
-      if (camBtn) {
-        camBtn.style.display = '';
-        camBtn.disabled = false;
-      }
+      document.getElementById('gesture-toggle')?.classList.remove('active');
+      resetGestureState();
+      updateGestureStatus('手势控制已关闭');
+      hideCursorUI();
     }
 
     // ─────────────────────────────────────────────
@@ -264,7 +269,7 @@
     }
 
     // ─────────────────────────────────────────────
-    // 推门手势检测
+    // 推门检测
     // ─────────────────────────────────────────────
     function detectPushDoor(results) {
       if (!results.multiHandLandmarks) return;
@@ -286,9 +291,7 @@
         if (dt < 0.3) continue;
 
         const dx = last.x - first.x;
-        const enterFromSide = first.x < 0.4 && dx > 0.25;
-
-        if (enterFromSide && dx > 0.3) {
+        if (first.x < 0.4 && dx > 0.3) {
           triggerPushDoor();
           return;
         }
@@ -304,7 +307,7 @@
       const hint = document.getElementById('push-hint');
       if (hint) hint.textContent = '叩门而入';
 
-      // 不停止摄像头：将流交给主场景 videoEl，推门进入后仍可手势操作
+      // 摄像头流交给主场景 videoEl，立即移除推门预览（避免两窗重叠）
       if (cameraStream && videoEl) {
         videoEl.srcObject = cameraStream;
         videoEl.style.display = 'block';
@@ -313,28 +316,23 @@
         videoEl.play().catch(() => {});
       }
 
-      if (handsCamera) {
-        handsCamera.stop();
-        handsCamera = null;
-      }
+      if (handsCamera) { handsCamera.stop(); handsCamera = null; }
 
-      // 先开启主场景手势再关 push，避免 rAF 循环中途停下
+      // 立即清理推门相关状态
       isActive = true;
       pushEnabled = false;
+      pushTriggered = false;
+      pushHandHistory = [];
+      if (pushHintTimeout) clearTimeout(pushHintTimeout);
+
+      // 立即移除推门预览（videoEl 已接管网关）
+      const oldPreview = document.getElementById('push-preview');
+      if (oldPreview) oldPreview.remove();
       pushVideoEl = null;
 
       handoffCameraToMain = true;
       document.getElementById('gesture-toggle')?.classList.add('active');
       updateGestureStatus('手势控制已开启');
-
-      setTimeout(() => {
-        const preview = document.getElementById('push-preview');
-        if (preview) {
-          preview.style.transition = 'opacity 0.4s';
-          preview.style.opacity = '0';
-          setTimeout(() => preview?.remove(), 400);
-        }
-      }, 300);
 
       if (typeof Landing !== 'undefined' && Landing.dissolve) {
         Landing.dissolve();
@@ -342,7 +340,7 @@
     }
 
     // ─────────────────────────────────────────────
-    // 鼠标跟随模式
+    // 鼠标跟随
     // ─────────────────────────────────────────────
     function initMouseCursor() {
       document.body.classList.add('mouse-cursor-active');
@@ -359,11 +357,7 @@
       });
 
       document.addEventListener('mouseenter', () => {
-        if (Gesture.isLandingVisible()) {
-          document.body.style.cursor = '';
-        } else {
-          document.body.style.cursor = 'none';
-        }
+        document.body.style.cursor = Gesture.isLandingVisible() ? '' : 'none';
       });
 
       document.addEventListener('click', (e) => {
@@ -377,17 +371,14 @@
       });
     }
 
-    // ─────────────────────────────────────────────
-    // 显示/隐藏光标
-    // ─────────────────────────────────────────────
     function showCursorUI() {
-      const cursor = document.getElementById('gesture-cursor');
-      if (cursor) cursor.classList.add('visible');
+      document.getElementById('gesture-cursor')?.classList.add('visible');
     }
 
     function hideCursorUI() {
-      const cursor = document.getElementById('gesture-cursor');
-      if (cursor) cursor.classList.remove('visible');
+      const c = document.getElementById('gesture-cursor');
+      if (c) c.classList.remove('visible');
+      clearDwellProgress();
     }
 
     // ─────────────────────────────────────────────
@@ -405,6 +396,14 @@
       }
 
       detectHotspotHover(cursorX, cursorY);
+
+      // 更新停留进度（仅指向手势时）
+      if (currentGesture === 'pointing') {
+        updateDwellProgress();
+      } else {
+        clearDwellProgress();
+      }
+
       requestAnimationFrame(animateCursor);
     }
 
@@ -419,12 +418,18 @@
         el.closest('#ast-send') || el.closest('#ast-mic') || el.closest('#ast-close') ||
         el.closest('.ast-send-btn') || el.closest('.ast-close-btn')
       );
+      const closeBtnEl = elements.find(el =>
+        el.closest('.push-preview-close') || el.id === 'gesture-toggle' ||
+        el.closest('#gesture-toggle')
+      );
 
       const targetEl = hotspotEl
         ? (hotspotEl.classList.contains('hotspot') ? hotspotEl : hotspotEl.closest('.hotspot'))
         : (timelineEl
             ? (timelineEl.classList.contains('timeline-item') ? timelineEl : timelineEl.closest('.timeline-item'))
-            : (aiBtnEl ? (aiBtnEl.closest('.ast-send-btn, .ast-close-btn') || aiBtnEl) : null));
+            : (aiBtnEl
+                ? (aiBtnEl.closest('.ast-send-btn, .ast-close-btn') || aiBtnEl)
+                : (closeBtnEl ? (closeBtnEl.closest('button') || closeBtnEl) : null)));
 
       if (targetEl && targetEl !== lastHoveredEl) {
         if (lastHoveredEl) lastHoveredEl.classList.remove('cursor-hover');
@@ -437,43 +442,122 @@
     }
 
     // ─────────────────────────────────────────────
+    // 停留进度圈（2秒，SVG ring）
+    // ─────────────────────────────────────────────
+    function updateDwellProgress() {
+      const now = performance.now();
+
+      if (dwellStartTs === 0) {
+        dwellStartTs = now;
+        dwellAnchorX = targetX;
+        dwellAnchorY = targetY;
+        // 确保 DOM 有 SVG ring
+        ensureDwellRing();
+      }
+
+      const moved = Math.hypot(targetX - dwellAnchorX, targetY - dwellAnchorY);
+      if (moved > DWELL_MOVE_PX) {
+        dwellStartTs = now;
+        dwellAnchorX = targetX;
+        dwellAnchorY = targetY;
+        clearDwellProgress();
+        return;
+      }
+
+      const elapsed = now - dwellStartTs;
+      const progress = Math.min(1, elapsed / DWELL_MS);
+
+      const cursor = document.getElementById('gesture-cursor');
+      if (cursor) {
+        cursor.classList.add('dwell-active');
+        // stroke-dashoffset：周长 2π·20 ≈ 125.6，progress=1 时 offset=0（填满）
+        const circumference = 2 * Math.PI * 20;
+        const dashOffset = circumference * (1 - progress);
+        const ring = cursor.querySelector('.dwell-ring circle');
+        if (ring) {
+          ring.style.strokeDashoffset = dashOffset;
+        }
+      }
+
+      if (progress >= 1 && now - lastClickTs >= CLICK_COOLDOWN) {
+        lastClickTs = now;
+        dwellStartTs = 0;
+        clearDwellProgress();
+        performClick(targetX, targetY);
+      }
+    }
+
+    function clearDwellProgress() {
+      dwellStartTs = 0;
+      const cursor = document.getElementById('gesture-cursor');
+      if (cursor) {
+        cursor.classList.remove('dwell-active');
+        const ring = cursor.querySelector('.dwell-ring circle');
+        if (ring) ring.style.strokeDashoffset = 2 * Math.PI * 20; // 重置为全空
+      }
+    }
+
+    function ensureDwellRing() {
+      const cursor = document.getElementById('gesture-cursor');
+      if (!cursor) return;
+      if (cursor.querySelector('.dwell-ring')) return;
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'dwell-ring');
+      svg.setAttribute('viewBox', '0 0 50 50');
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', '25');
+      circle.setAttribute('cy', '25');
+      circle.setAttribute('r', '20');
+      circle.setAttribute('fill', 'none');
+      circle.setAttribute('stroke', 'rgba(90,138,106,0.85)');
+      circle.setAttribute('stroke-width', '2.5');
+      circle.setAttribute('stroke-linecap', 'round');
+      const circumference = 2 * Math.PI * 20;
+      circle.setAttribute('stroke-dasharray', circumference);
+      circle.setAttribute('stroke-dashoffset', circumference);
+      svg.appendChild(circle);
+      cursor.appendChild(svg);
+    }
+
+    // ─────────────────────────────────────────────
     // 手势分类与处理
     // ─────────────────────────────────────────────
     function detectAndApplyGesture(lm) {
       const gesture = classifyGesture(lm);
 
       if (gesture !== prevGesture) {
+        // 切换到手势时：清空滑动缓冲，避免手掌快速收回再伸出误触发
+        if (gesture !== 'swiping') {
+          swipeBuffer = [];
+          prevPalmX = -1;
+        }
         onGestureChange(gesture, prevGesture);
         prevGesture = gesture;
       }
 
       currentGesture = gesture;
 
-      switch (gesture) {
-        case 'swiping':
-          handleSwiping(lm);
-          break;
-        case 'fist':
-          handleFist(lm);
-          break;
-        case 'pointing':
-          handlePointing(lm);
-          break;
+      // 只有手掌才处理滑动切换
+      if (gesture === 'swiping') {
+        handleSwiping(lm);
+      } else if (gesture === 'fist') {
+        handleFist(lm);
+      } else if (gesture === 'pointing') {
+        // 停留进度在 animateCursor 中处理，此处无需额外操作
       }
     }
 
     function classifyGesture(lm) {
       const wrist = lm[0];
 
-      const isIndexClosed   = dist(lm[8], wrist)  < dist(lm[6], wrist)  * 1.1;
-      const isMiddleClosed  = dist(lm[12], wrist) < dist(lm[10], wrist) * 1.1;
-      const isRingClosed    = dist(lm[16], wrist) < dist(lm[14], wrist) * 1.1;
-      const isPinkyClosed    = dist(lm[20], wrist) < dist(lm[18], wrist) * 1.1;
+      const isIndexClosed   = dist(lm[8],  wrist) < dist(lm[6],  wrist) * 1.1;
+      const isMiddleClosed = dist(lm[12], wrist) < dist(lm[10], wrist) * 1.1;
+      const isRingClosed   = dist(lm[16], wrist) < dist(lm[14], wrist) * 1.1;
+      const isPinkyClosed  = dist(lm[20], wrist) < dist(lm[18], wrist) * 1.1;
 
       if (isIndexClosed && isMiddleClosed && isRingClosed && isPinkyClosed) {
         const isIndexExtended = dist(lm[8], wrist) > dist(lm[5], wrist) * 1.2;
-        if (isIndexExtended) return 'pointing';
-        return 'fist';
+        return isIndexExtended ? 'pointing' : 'fist';
       }
 
       return 'swiping';
@@ -484,9 +568,9 @@
       const indicator = document.getElementById('gesture-indicator');
 
       if (clickAnimTimeout) { clearTimeout(clickAnimTimeout); clickAnimTimeout = null; }
-      if (cursor) cursor.classList.remove('clicking', 'pointing');
-
-      dwellStartTime = 0;
+      if (cursor) cursor.classList.remove('clicking', 'fist', 'pointing', 'dwell-active');
+      // 清空停留进度
+      clearDwellProgress();
 
       switch (newG) {
         case 'fist':
@@ -504,11 +588,8 @@
             cursor.style.height = '18px';
             cursor.classList.add('pointing');
           }
-          if (indicator) updateGestureStatus('食指 · 点击热区');
+          if (indicator) updateGestureStatus('指向 · 停留2秒点击');
           Scenes.freeze(false);
-          dwellStartTime = Date.now();
-          dwellX = targetX;
-          dwellY = targetY;
           break;
         case 'swiping':
           if (cursor) {
@@ -523,7 +604,7 @@
     }
 
     // ─────────────────────────────────────────────
-    // P1: 滑动 → 切换时辰
+    // 滑动 → 切换时辰（仅手掌）
     // ─────────────────────────────────────────────
     function handleSwiping(lm) {
       const palm = lm[9];
@@ -552,30 +633,10 @@
     }
 
     // ─────────────────────────────────────────────
-    // P2: 握拳 → 画面冻结
+    // 握拳 → 冻结
     // ─────────────────────────────────────────────
     function handleFist(lm) {
       Scenes.freeze(true);
-    }
-
-    // ─────────────────────────────────────────────
-    // P3: 食指指向 → 停留点击
-    // ─────────────────────────────────────────────
-    function handlePointing(lm) {
-      Scenes.freeze(false);
-
-      const now = Date.now();
-      const moved = Math.hypot(targetX - dwellX, targetY - dwellY);
-
-      if (moved > DWELL_MOVE_THRESHOLD) {
-        dwellStartTime = now;
-        dwellX = targetX;
-        dwellY = targetY;
-      } else if (dwellStartTime > 0 && now - dwellStartTime >= DWELL_TIME && now - lastClickTime >= CLICK_COOLDOWN) {
-        lastClickTime = now;
-        dwellStartTime = now;
-        performClick(targetX, targetY);
-      }
     }
 
     // ─────────────────────────────────────────────
@@ -604,7 +665,6 @@
         el.closest('#ast-send') ||
         el.closest('#ast-mic') ||
         el.closest('#ast-close') ||
-        el.closest('.gesture-toggle') ||
         el.closest('.ast-voice-btn') ||
         el.closest('.push-preview-close')
       );
@@ -622,7 +682,7 @@
     }
 
     // ─────────────────────────────────────────────
-    // 工具函数
+    // 工具
     // ─────────────────────────────────────────────
     function dist(a, b) {
       return Math.sqrt(
@@ -635,13 +695,14 @@
     function resetGestureState() {
       prevPalmX = -1;
       swipeBuffer = [];
-      dwellStartTime = 0;
+      dwellStartTs = 0;
       currentGesture = 'none';
       prevGesture = 'none';
       const cursor = document.getElementById('gesture-cursor');
       if (cursor) {
-        cursor.classList.remove('fist', 'pointing', 'clicking');
+        cursor.classList.remove('fist', 'pointing', 'clicking', 'dwell-active');
       }
+      clearDwellProgress();
       Scenes.freeze(false);
     }
 
@@ -693,7 +754,7 @@
         }
         return true;
       } catch (err) {
-        console.warn('[Gesture] 摄像头访问失败:', err);
+        console.warn('[Gesture] 摄像头启动失败:', err);
         updateGestureStatus('摄像头不可用');
         return false;
       }
@@ -756,12 +817,7 @@
 
       hands.onResults(onHandResults);
 
-      if (handsCamera) {
-        handsCamera.stop();
-        handsCamera = null;
-      }
-
-      // 统一用手动 rAF 循环：首页用 push 预览 video，主场景用 videoEl
+      if (handsCamera) { handsCamera.stop(); handsCamera = null; }
       startManualFrameLoop();
     }
 
@@ -794,33 +850,27 @@
     }
 
     // ─────────────────────────────────────────────
-    // 开关控制（主场景手势）
+    // 开关控制（左上角按钮）
+    // 首页：开启摄像头推门；主场景：开启/关闭手势
     // ─────────────────────────────────────────────
     async function toggle() {
-      const btn = document.getElementById('gesture-toggle');
-
-      if (isActive) {
-        isActive = false;
-        btn?.classList.remove('active');
-        if (handsCamera) { handsCamera.stop(); handsCamera = null; }
-        if (cameraStream) {
-          cameraStream.getTracks().forEach(t => t.stop());
-          cameraStream = null;
-        }
-        videoEl.style.display = 'none';
-        resetGestureState();
-        updateGestureStatus('手势控制已关闭');
+      if (isActive || pushEnabled) {
+        closeAll();
+      } else if (Gesture.isLandingVisible()) {
+        // 首页：请求摄像头并启用推门检测
+        await requestCameraAndPushDoor();
       } else {
+        // 主场景：开启摄像头手势
         const ok = await startCamera();
         if (ok) {
           isActive = true;
-          btn?.classList.add('active');
+          buildCameraPreview(cameraStream);
         }
       }
     }
 
     // ─────────────────────────────────────────────
-    // 首页推门重置（进入主场景时调用）
+    // 首页推门清理
     // ─────────────────────────────────────────────
     function resetPushDoor() {
       pushEnabled = false;
@@ -835,10 +885,6 @@
       const hint = document.getElementById('landing-push-hint');
       if (hint) hint.style.display = 'none';
 
-      const camBtn = document.getElementById('landing-camera-btn');
-      if (camBtn) camBtn.style.display = 'none';
-
-      // 推门进入且已把流交给主场景时，不要在这里关掉摄像头
       if (handoffCameraToMain) {
         handoffCameraToMain = false;
         return;
@@ -862,11 +908,6 @@
         return l && !l.classList.contains('gone') && l.style.display !== 'none';
       },
       resetPushDoor,
-      closeCamera: () => {
-        if (cameraStream) {
-          cameraStream.getTracks().forEach(t => t.stop());
-          cameraStream = null;
-        }
-      }
+      closeAll
     };
   })();

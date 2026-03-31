@@ -4,42 +4,48 @@
 
    const Timeline = (() => {
 
+    const PAIR_MAP = [0, 2, 4, 6];
+
     function init() {
       const items = document.querySelectorAll('.timeline-item');
       items.forEach((item) => {
         item.addEventListener('click', () => {
-          const index = parseInt(item.dataset.index);
-          Scenes.goTo(index);
+          const pairIndex = parseInt(item.dataset.index);
+          // pairIndex 就是跳到 pair 的第一个场景
+          Scenes.goTo(pairIndex);
         });
       });
-  
+
       // 初始进度
       updateProgress(0);
     }
-  
-    function setActive(index) {
+
+    function setActive(sceneIndex) {
       const items = document.querySelectorAll('.timeline-item');
       items.forEach((item, i) => {
-        item.classList.toggle('active', i === index);
+        const pairStart = PAIR_MAP[i];
+        const pairEnd = PAIR_MAP[i] + 1;
+        const isActive = sceneIndex >= pairStart && sceneIndex <= pairEnd;
+        item.classList.toggle('active', isActive);
       });
-      updateProgress(index);
+      updateProgress(sceneIndex);
     }
-  
-    function updateProgress(index) {
-      const total = Scenes.getTotal();
+
+    function updateProgress(sceneIndex) {
       const progress = document.getElementById('timeline-progress');
       if (progress) {
-        const percent = (index / (total - 1)) * 100;
-        progress.style.width = percent + '%';
+        // 映射 8 场景 → 4 进度档：0→0%, 1→14%, 2→33%, 3→47%, 4→67%, 5→80%, 6→100%, 7→100%
+        const steps = [0, 14, 33, 47, 67, 80, 100, 100];
+        progress.style.width = steps[Math.min(sceneIndex, 7)] + '%';
       }
     }
-  
+
     function show() {
       const timeline = document.getElementById('timeline');
       if (timeline) {
         timeline.classList.add('visible');
       }
     }
-  
+
     return { init, setActive, show };
   })();

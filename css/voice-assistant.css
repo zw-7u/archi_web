@@ -167,6 +167,35 @@
 
 .ast-close-btn:hover { opacity: 1; }
 
+/* 朗读音量开关（关闭按钮旁） */
+.ast-volume-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0;
+  padding: 4px;
+  margin-left: 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s, transform 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ast-gold-light);
+}
+
+.ast-volume-btn:hover { opacity: 1; transform: scale(1.1); }
+
+/* 开启状态：正常音量图标 */
+.ast-volume-btn.active svg path:first-child { opacity: 1; }
+.ast-volume-btn.active svg path:last-child  { opacity: 1; }
+
+/* 关闭状态：静音图标（SVG换色+降半透明） */
+.ast-volume-btn:not(.active) {
+  opacity: 0.35;
+  color: rgba(232, 199, 106, 0.4);
+}
+.ast-volume-btn:not(.active) svg path:last-child { display: none; }
+
 /* Chat Area */
 .ast-chat-area {
   flex: 1;
