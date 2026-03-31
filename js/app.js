@@ -10,13 +10,25 @@
       // 1. 初始化首页粒子场景
       Landing.init();
   
-      // 2. 空格键进入（或摄像头推门成功时 Landing.dissolve() 被调用）
+      // 2. 空格键进入（或点击首页进入主场景）
       document.addEventListener('keydown', (e) => {
         if (e.code === 'Space' && !hasEntered) {
           e.preventDefault();
           Landing.dissolve();
         }
       });
+
+      // 3. 点击首页直接进入（无需开启摄像头）
+      const landingSection = document.getElementById('landing');
+      if (landingSection) {
+        landingSection.addEventListener('click', (e) => {
+          // 忽略语言切换按钮的点击
+          if (e.target.closest('#language-toggle')) return;
+          if (!hasEntered) {
+            Landing.dissolve();
+          }
+        });
+      }
   
       // 3. 语言切换功能由 I18N 模块处理 (i18n.js)
 

@@ -3,7 +3,7 @@
    P1: 手掌滑动 → 切换时辰（仅手掌有效）
    P2: 握拳 → 画面冻结，光标跟随移动
    P3: 食指指向 → 停留2秒触发点击（含进度圈）
-   摄像头预览固定左下角；×仅关摄像头；右上开关完全关闭手势
+   首页：点击直接进入；摄像头由左上角按钮在主场景中开启
    ========================================== */
 
   const Gesture = (() => {
@@ -75,34 +75,38 @@
       const toggleBtn = document.getElementById('gesture-toggle');
       if (toggleBtn) toggleBtn.addEventListener('click', toggle);
 
-      buildLandingPushHint();
       initMouseCursor();
       animateCursor();
+
+      buildLandingPushHint();
 
       console.log('[Gesture] 模块已初始化');
     }
 
     // ─────────────────────────────────────────────
-    // 首页推门提示
+    // 首页点击进入提示
     // ─────────────────────────────────────────────
     function buildLandingPushHint() {
       const landing = document.getElementById('landing');
       if (!landing) return;
 
-    // 只保留中央文字+光圈提示（摄像头由左上角 gesture-toggle 统一控制，光圈可点击进入）
-    const hint = document.createElement('div');
-    hint.id = 'landing-push-hint';
-    hint.style.cssText = 'cursor: pointer; pointer-events: all;';
-    hint.innerHTML = `
-      <div class="push-hint-circle"></div>
-      <div class="push-hint-text">将手掌推入<br><span>点击亦可进入</span></div>
-    `;
-    hint.addEventListener('click', () => Gesture.toggle());
-    landing.appendChild(hint);
-  }
+      const hint = document.createElement('div');
+      hint.id = 'landing-push-hint';
+      hint.style.cssText = 'cursor: pointer; pointer-events: all;';
+      hint.innerHTML = `
+        <div class="push-hint-circle"></div>
+        <div class="push-hint-text">点击进入</div>
+      `;
+      hint.addEventListener('click', () => {
+        if (typeof Landing !== 'undefined' && Landing.dissolve) {
+          Landing.dissolve();
+        }
+      });
+      landing.appendChild(hint);
+    }
 
     // ─────────────────────────────────────────────
-    // 请求摄像头并推门（首页由 gesture-toggle 触发）
+    // 请求摄像头（主场景手势模式）
     // ─────────────────────────────────────────────
     async function requestCameraAndPushDoor() {
 
@@ -853,14 +857,14 @@
 
     // ─────────────────────────────────────────────
     // 开关控制（左上角按钮）
-    // 首页：开启摄像头推门；主场景：开启/关闭手势
+    // 首页：摄像头不激活，进入需直接点击页面；主场景：开启/关闭手势
     // ─────────────────────────────────────────────
     async function toggle() {
+      // 首页时不激活摄像头，直接点击页面进入即可
+      if (Gesture.isLandingVisible()) return;
+
       if (isActive || pushEnabled) {
         closeAll();
-      } else if (Gesture.isLandingVisible()) {
-        // 首页：请求摄像头并启用推门检测
-        await requestCameraAndPushDoor();
       } else {
         // 主场景：开启摄像头手势
         const ok = await startCamera();
