@@ -22,8 +22,8 @@
       const landingSection = document.getElementById('landing');
       if (landingSection) {
         landingSection.addEventListener('click', (e) => {
-          // 忽略语言切换按钮的点击
-          if (e.target.closest('#language-toggle')) return;
+          // 忽略右上工具栏（摄像头 / 语言）
+          if (e.target.closest('.top-toolbar')) return;
           if (!hasEntered) {
             Landing.dissolve();
           }

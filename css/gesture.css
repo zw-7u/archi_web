@@ -192,13 +192,13 @@ body.mouse-cursor-active .gesture-cursor {
   white-space: nowrap;
 }
 
-/* ---- 手势开关按钮（固定左上角，首页 & 主场景共用，pointer-events:auto 穿透父层） ---- */
+/* ---- 手势开关（置于 .top-toolbar 内，与语言切换同一行；摄像头在双语左侧） ---- */
 .gesture-toggle {
-  position: fixed;
-  top: 20px;
-  left: 20px;
+  position: relative;
+  top: auto;
+  left: auto;
   right: auto;
-  z-index: 9999;
+  z-index: auto;
   width: 44px;
   height: 44px;
   background: rgba(26, 23, 20, 0.75);

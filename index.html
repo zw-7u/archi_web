@@ -15,10 +15,17 @@
 </head>
 <body>
 
-  <!-- ==================== 语言切换按钮 ==================== -->
-  <button id="language-toggle" class="language-toggle" title="切换语言/Change Language">
-    中文/EN
-  </button>
+  <!-- ==================== 右上：摄像头（左）+ 中英双语（右）同一水平线 ==================== -->
+  <div class="top-toolbar" role="toolbar" aria-label="工具栏">
+    <button id="gesture-toggle" class="gesture-toggle" title="开启/关闭手势控制">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22">
+        <path d="M15 3a2 2 0 012 2v2a2 2 0 01-2 2M9 3a2 2 0 00-2 2v2a2 2 0 002 2M12 14v7M8 18h8M7 9v3a5 5 0 0010 0V9"/>
+      </svg>
+    </button>
+    <button id="language-toggle" class="language-toggle" title="切换语言/Change Language">
+      中文/EN
+    </button>
+  </div>
 
   <!-- ==================== 首页：Three.js 粒子场景 ==================== -->
   <section id="landing" class="landing">
@@ -46,13 +53,6 @@
       <span class="gesture-label">手势控制已开启</span>
     </div>
   </div>
-
-  <!-- 手势摄像头开关（固定左上角，首页和主场景都显示） -->
-  <button id="gesture-toggle" class="gesture-toggle" title="开启/关闭手势控制">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22">
-      <path d="M15 3a2 2 0 012 2v2a2 2 0 01-2 2M9 3a2 2 0 00-2 2v2a2 2 0 002 2M12 14v7M8 18h8M7 9v3a5 5 0 0010 0V9"/>
-    </svg>
-  </button>
 
   <!-- ==================== 主内容区：时辰场景 ==================== -->
   <main id="scenes-container" class="scenes-container hidden">

@@ -1,8 +1,25 @@
-.language-toggle {
+/* 右上工具条：摄像头在左，中英切换在右，同一水平线 */
+.top-toolbar {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: calc(20px + env(safe-area-inset-top, 0px));
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  left: auto;
   z-index: 10000;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.top-toolbar > * {
+  pointer-events: auto;
+  flex-shrink: 0;
+}
+
+.language-toggle {
+  position: static;
+  z-index: auto;
   background: rgba(200, 168, 85, 0.1);
   border: 1px solid rgba(200, 168, 85, 0.3);
   border-radius: 20px;
@@ -44,12 +61,4 @@
   background: rgba(255, 255, 255, 0.2);
   border-color: #ffffff;
   box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
-}
-
-/* 手势切换按钮与语言切换分离（主场景） */
-.gesture-toggle {
-  position: fixed;
-  top: 70px;
-  right: 20px;
-  z-index: 10000;
 }

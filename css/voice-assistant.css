@@ -21,7 +21,8 @@
 /* ========== Floating Button ========== */
 #voice-assistant-trigger {
   position: fixed;
-  bottom: 30px;
+  /* 上移避免遮挡底部时辰时间轴 */
+  bottom: calc(108px + env(safe-area-inset-bottom, 0px));
   right: 30px;
   width: 64px;
   height: 64px;
@@ -80,7 +81,7 @@
 /* ========== Chat Panel ========== */
 #voice-assistant-panel {
   position: fixed;
-  bottom: 110px;
+  bottom: calc(188px + env(safe-area-inset-bottom, 0px));
   right: 30px;
   width: 400px;
   max-height: 580px;
@@ -429,7 +430,8 @@ body.mouse-cursor-active .ast-close-btn:hover {
   #voice-assistant-panel {
     left: 10px;
     right: 10px;
-    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    /* 高于浮动按钮，避免压住底部时辰轴 */
+    bottom: calc(164px + env(safe-area-inset-bottom, 0px));
     width: auto;
     max-width: none;
     max-height: min(52dvh, 360px);
@@ -442,7 +444,7 @@ body.mouse-cursor-active .ast-close-btn:hover {
   }
 
   #voice-assistant-trigger {
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(96px + env(safe-area-inset-bottom, 0px));
     right: calc(16px + env(safe-area-inset-right, 0px));
     width: 52px;
     height: 52px;
