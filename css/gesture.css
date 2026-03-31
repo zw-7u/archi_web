@@ -204,7 +204,8 @@ body.mouse-cursor-active .gesture-cursor {
   background: rgba(26, 23, 20, 0.75);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(74, 66, 54, 0.6);
-  color: var(--ink-faint);
+  /* 未激活：灰暗色调 */
+  color: rgba(184, 169, 142, 0.4);
   border-radius: 8px;
   cursor: pointer;
   display: flex;
@@ -214,16 +215,23 @@ body.mouse-cursor-active .gesture-cursor {
   pointer-events: auto;
 }
 
+/* 开启状态：金色 + 光晕；hover 保持金色系不变 */
 .gesture-toggle:hover {
-  border-color: var(--gold);
-  color: var(--gold);
-  box-shadow: 0 0 12px rgba(200, 168, 85, 0.15);
+  border-color: rgba(200, 168, 85, 0.55);
+  color: rgba(200, 168, 85, 0.65);
+  box-shadow: 0 0 8px rgba(200, 168, 85, 0.15);
 }
 
 .gesture-toggle.active {
-  border-color: var(--jade);
-  color: var(--jade);
-  box-shadow: 0 0 12px rgba(90, 138, 106, 0.3);
+  border-color: var(--gold);
+  color: var(--gold);
+  box-shadow: 0 0 14px rgba(200, 168, 85, 0.45);
+}
+
+.gesture-toggle.active:hover {
+  border-color: var(--gold-light);
+  color: var(--gold-light);
+  box-shadow: 0 0 18px rgba(200, 168, 85, 0.55);
 }
 
 /* ---- 挥手方向提示 ---- */

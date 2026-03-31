@@ -15,7 +15,6 @@
     let isInitializing = false;
     let cameraStream = null;
     let pushVideoEl = null;
-    let handoffCameraToMain = false;
     let manualLoopRunning = false;
 
     // ---- 手势状态机 ----
@@ -54,15 +53,6 @@
     const CAMERA_UTILS_URL    = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js';
 
     // ─────────────────────────────────────────────
-    // 首页推门
-    // ─────────────────────────────────────────────
-    let pushEnabled = false;
-    let pushTriggered = false;
-    let pushHandHistory = [];
-    const PUSH_HISTORY_FRAMES = 18;
-    let pushHintTimeout = null;
-
-    // ─────────────────────────────────────────────
     // 初始化
     // ─────────────────────────────────────────────
     function init() {
@@ -78,60 +68,7 @@
       initMouseCursor();
       animateCursor();
 
-      buildLandingPushHint();
-
       console.log('[Gesture] 模块已初始化');
-    }
-
-    // ─────────────────────────────────────────────
-    // 首页点击进入提示
-    // ─────────────────────────────────────────────
-    function buildLandingPushHint() {
-      const landing = document.getElementById('landing');
-      if (!landing) return;
-
-      const hint = document.createElement('div');
-      hint.id = 'landing-push-hint';
-      hint.style.cssText = 'cursor: pointer; pointer-events: all;';
-      hint.innerHTML = `
-        <div class="push-hint-circle"></div>
-        <div class="push-hint-text">点击进入</div>
-      `;
-      hint.addEventListener('click', () => {
-        if (typeof Landing !== 'undefined' && Landing.dissolve) {
-          Landing.dissolve();
-        }
-      });
-      landing.appendChild(hint);
-    }
-
-    // ─────────────────────────────────────────────
-    // 请求摄像头（主场景手势模式）
-    // ─────────────────────────────────────────────
-    async function requestCameraAndPushDoor() {
-
-      try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 640, height: 480, facingMode: 'user' }
-        });
-
-        const hint = document.getElementById('landing-push-hint');
-        if (hint) hint.style.display = 'none';
-
-        buildCameraPreview(cameraStream);
-
-        const loaded = await loadMediaPipe();
-        if (!loaded) throw new Error('MediaPipe failed');
-
-        // 首页状态：启用推门检测
-        if (Gesture.isLandingVisible()) {
-          pushEnabled = true;
-          pushTriggered = false;
-        }
-
-      } catch (err) {
-        console.warn('[Gesture] 摄像头启动失败:', err);
-      }
     }
 
     // ─────────────────────────────────────────────
@@ -181,6 +118,7 @@
       closeBtn.title = '关闭摄像头';
       closeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        // 仅关闭小屏预览 UI，摄像头继续运行供手势追踪
         closeCameraPreview();
       });
       preview.appendChild(closeBtn);
@@ -211,23 +149,11 @@
         preview.style.opacity = '0';
         setTimeout(() => preview?.remove(), 320);
       }
-      pushVideoEl = null;
-
-      // 隐藏首页文字提示（推门已结束）
-      if (Gesture.isLandingVisible()) {
-        const hint = document.getElementById('landing-push-hint');
-        if (hint) hint.style.display = 'none';
-      }
     }
 
     // 关闭全部手势（含摄像头）
     function closeAll() {
       isActive = false;
-      pushEnabled = false;
-      pushTriggered = false;
-      pushHandHistory = [];
-      handoffCameraToMain = false;
-      if (pushHintTimeout) clearTimeout(pushHintTimeout);
 
       if (cameraStream) {
         cameraStream.getTracks().forEach(t => t.stop());
@@ -242,9 +168,8 @@
       if (preview) preview.remove();
       pushVideoEl = null;
 
-      document.getElementById('gesture-toggle')?.classList.remove('active');
+      // closeAll() 只负责关闭硬件资源；按钮 class 由调用者（toggle）统一管理
       resetGestureState();
-      updateGestureStatus('手势控制已关闭');
       hideCursorUI();
     }
 
@@ -252,10 +177,6 @@
     // 手势结果回调
     // ─────────────────────────────────────────────
     function onHandResults(results) {
-      if (pushEnabled && !pushTriggered) {
-        detectPushDoor(results);
-      }
-
       if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
         hideCursorUI();
         resetGestureState();
@@ -272,77 +193,6 @@
       targetY = indexTip.y * window.innerHeight;
 
       detectAndApplyGesture(lm);
-    }
-
-    // ─────────────────────────────────────────────
-    // 推门检测
-    // ─────────────────────────────────────────────
-    function detectPushDoor(results) {
-      if (!results.multiHandLandmarks) return;
-      const hands = results.multiHandLandmarks;
-      const now = Date.now();
-
-      for (const lm of hands) {
-        const palm = lm[9];
-        const mirroredX = 1 - palm.x;
-
-        pushHandHistory.push({ x: mirroredX, y: palm.y, z: palm.z || 0, time: now });
-        if (pushHandHistory.length > PUSH_HISTORY_FRAMES) pushHandHistory.shift();
-
-        if (pushHandHistory.length < 10) continue;
-
-        const first = pushHandHistory[0];
-        const last = pushHandHistory[pushHandHistory.length - 1];
-        const dt = (now - first.time) / 1000;
-        if (dt < 0.3) continue;
-
-        const dx = last.x - first.x;
-        if (first.x < 0.4 && dx > 0.3) {
-          triggerPushDoor();
-          return;
-        }
-      }
-    }
-
-    function triggerPushDoor() {
-      if (pushTriggered) return;
-      pushTriggered = true;
-
-      if (pushHintTimeout) clearTimeout(pushHintTimeout);
-
-      const hint = document.getElementById('push-hint');
-      if (hint) hint.textContent = '叩门而入';
-
-      // 摄像头流交给主场景 videoEl，立即移除推门预览（避免两窗重叠）
-      if (cameraStream && videoEl) {
-        videoEl.srcObject = cameraStream;
-        videoEl.style.display = 'block';
-        videoEl.style.opacity = '0.4';
-        videoEl.style.zIndex = '9998';
-        videoEl.play().catch(() => {});
-      }
-
-      if (handsCamera) { handsCamera.stop(); handsCamera = null; }
-
-      // 立即清理推门相关状态
-      isActive = true;
-      pushEnabled = false;
-      pushTriggered = false;
-      pushHandHistory = [];
-      if (pushHintTimeout) clearTimeout(pushHintTimeout);
-
-      // 立即移除推门预览（videoEl 已接管网关）
-      const oldPreview = document.getElementById('push-preview');
-      if (oldPreview) oldPreview.remove();
-      pushVideoEl = null;
-
-      handoffCameraToMain = true;
-      document.getElementById('gesture-toggle')?.classList.add('active');
-      updateGestureStatus('手势控制已开启');
-
-      if (typeof Landing !== 'undefined' && Landing.dissolve) {
-        Landing.dissolve();
-      }
     }
 
     // ─────────────────────────────────────────────
@@ -735,6 +585,11 @@
     // MediaPipe Hands
     // ─────────────────────────────────────────────
     async function startCamera() {
+      // 先停掉已存在的摄像头流，防止重复开启泄漏
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+      }
       try {
         cameraStream = await navigator.mediaDevices.getUserMedia({
           video: { width: 640, height: 480, facingMode: 'user' }
@@ -828,7 +683,6 @@
     }
 
     function getHandFrameSource() {
-      if (pushEnabled && pushVideoEl && pushVideoEl.readyState >= 2) return pushVideoEl;
       if (isActive && videoEl && videoEl.readyState >= 2) return videoEl;
       return null;
     }
@@ -839,10 +693,10 @@
 
       const tick = async () => {
         const feed = getHandFrameSource();
-        if ((isActive || pushEnabled) && hands && feed) {
+        if (isActive && hands && feed) {
           try { await hands.send({ image: feed }); } catch {}
         }
-        if (isActive || pushEnabled) {
+        if (isActive) {
           requestAnimationFrame(tick);
         } else {
           manualLoopRunning = false;
@@ -856,50 +710,32 @@
     }
 
     // ─────────────────────────────────────────────
-    // 开关控制（左上角按钮）
-    // 首页：摄像头不激活，进入需直接点击页面；主场景：开启/关闭手势
+    // 开关控制（右上工具栏按钮）
+    // 点击一次开启金色发光，点击一次关闭灰色暗淡
     // ─────────────────────────────────────────────
     async function toggle() {
-      // 首页时不激活摄像头，直接点击页面进入即可
-      if (Gesture.isLandingVisible()) return;
-
-      if (isActive || pushEnabled) {
+      if (isActive) {
+        // 已开启 → 关闭摄像头
         closeAll();
       } else {
-        // 主场景：开启摄像头手势
+        // 未开启 → 开启摄像头
         const ok = await startCamera();
         if (ok) {
           isActive = true;
           buildCameraPreview(cameraStream);
+          document.getElementById('gesture-toggle')?.classList.add('active');
+          updateGestureStatus('手势控制已开启');
+        } else {
+          document.getElementById('gesture-toggle')?.classList.remove('active');
         }
       }
     }
 
     // ─────────────────────────────────────────────
-    // 首页推门清理
+    // 推门已废弃，摄像头由 toggle() 统一管理
     // ─────────────────────────────────────────────
     function resetPushDoor() {
-      pushEnabled = false;
-      pushTriggered = false;
-      pushHandHistory = [];
-      pushVideoEl = null;
-      if (pushHintTimeout) clearTimeout(pushHintTimeout);
-
-      const preview = document.getElementById('push-preview');
-      if (preview) preview.remove();
-
-      const hint = document.getElementById('landing-push-hint');
-      if (hint) hint.style.display = 'none';
-
-      if (handoffCameraToMain) {
-        handoffCameraToMain = false;
-        return;
-      }
-
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(t => t.stop());
-        cameraStream = null;
-      }
+      // 推门已废弃，摄像头由 toggle() 统一管理
     }
 
     // ─────────────────────────────────────────────
@@ -913,7 +749,6 @@
         const l = document.getElementById('landing');
         return l && !l.classList.contains('gone') && l.style.display !== 'none';
       },
-      resetPushDoor,
       closeAll
     };
   })();
