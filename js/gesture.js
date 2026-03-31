@@ -115,7 +115,7 @@
       const closeBtn = document.createElement('button');
       closeBtn.className = 'push-preview-close';
       closeBtn.innerHTML = '&times;';
-      closeBtn.title = '关闭摄像头';
+      closeBtn.title = '关闭预览';
       closeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         // 仅关闭小屏预览 UI，摄像头继续运行供手势追踪
@@ -141,14 +141,11 @@
       document.body.appendChild(preview);
     }
 
-    // 关闭摄像头预览（保留手势，隐藏 UI）
+    // 关闭摄像头预览小窗（仅删除 UI，摄像头继续运行供手势追踪）
     function closeCameraPreview() {
       const preview = document.getElementById('push-preview');
-      if (preview) {
-        preview.style.transition = 'opacity 0.3s';
-        preview.style.opacity = '0';
-        setTimeout(() => preview?.remove(), 320);
-      }
+      if (preview) preview.remove();
+      pushVideoEl = null;
     }
 
     // 关闭全部手势（含摄像头）
@@ -714,9 +711,14 @@
     // 点击一次开启金色发光，点击一次关闭灰色暗淡
     // ─────────────────────────────────────────────
     async function toggle() {
-      if (isActive) {
+      // 先保存状态，避免 closeAll() 内部修改 isActive 后影响判断
+      const currentlyActive = isActive;
+
+      if (currentlyActive) {
         // 已开启 → 关闭摄像头
         closeAll();
+        document.getElementById('gesture-toggle')?.classList.remove('active');
+        updateGestureStatus('手势控制已关闭');
       } else {
         // 未开启 → 开启摄像头
         const ok = await startCamera();
