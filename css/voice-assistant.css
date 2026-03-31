@@ -89,7 +89,8 @@
   border: 2px solid var(--ast-gold);
   border-radius: 16px;
   box-shadow: 0 12px 50px var(--ast-shadow), 0 0 20px rgba(197,151,59,0.15);
-  z-index: 9989;
+  /* 高于悬浮麦克风按钮，避免底部区域被下层挡住 */
+  z-index: 10001;
   display: none;
   flex-direction: column;
   overflow: hidden;
@@ -176,26 +177,31 @@
   font-size: 0;
   padding: 4px;
   margin-left: 4px;
-  opacity: 0.7;
+  opacity: 0.85;
   transition: opacity 0.2s, transform 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--ast-gold-light);
+  position: relative;
+  z-index: 2;
 }
 
 .ast-volume-btn:hover { opacity: 1; transform: scale(1.1); }
 
-/* 开启状态：正常音量图标 */
-.ast-volume-btn.active svg path:first-child { opacity: 1; }
-.ast-volume-btn.active svg path:last-child  { opacity: 1; }
-
-/* 关闭状态：静音图标（SVG换色+降半透明） */
-.ast-volume-btn:not(.active) {
-  opacity: 0.35;
-  color: rgba(232, 199, 106, 0.4);
+/* 喇叭主体始终可见；声波与静音 X 淡入淡出 */
+.ast-volume-btn .ast-vol-speaker { opacity: 1; }
+.ast-volume-btn .ast-vol-wave,
+.ast-volume-btn .ast-vol-mute-x {
+  transition: opacity 0.2s ease;
 }
-.ast-volume-btn:not(.active) svg path:last-child { display: none; }
+
+/* 开启：双弧声波；静音：隐藏声波、显示 X */
+.ast-volume-btn.active .ast-vol-wave { opacity: 1; }
+.ast-volume-btn.active .ast-vol-mute-x { opacity: 0; pointer-events: none; }
+
+.ast-volume-btn:not(.active) .ast-vol-wave { opacity: 0; }
+.ast-volume-btn:not(.active) .ast-vol-mute-x { opacity: 1; }
 
 /* Chat Area */
 .ast-chat-area {
@@ -318,6 +324,8 @@
   gap: 8px;
   align-items: center;
   background: rgba(255,255,255,0.5);
+  position: relative;
+  z-index: 1;
 }
 
 .ast-text-input {
@@ -411,7 +419,7 @@ body.mouse-cursor-active .ast-close-btn:hover {
   50% { transform: scaleY(1.2); }
 }
 
-/* Ornamental Corner */
+/* Ornamental Corner（装饰层不抢点击，避免压住发送键） */
 .ast-corner {
   position: absolute;
   width: 24px;
@@ -419,6 +427,7 @@ body.mouse-cursor-active .ast-close-btn:hover {
   border-color: var(--ast-gold);
   border-style: solid;
   opacity: 0.4;
+  pointer-events: none;
 }
 .ast-corner.tl { top: 6px; left: 6px; border-width: 2px 0 0 2px; }
 .ast-corner.tr { top: 6px; right: 6px; border-width: 2px 2px 0 0; }

@@ -107,6 +107,7 @@ const CONFIG = {
     nameEl.textContent = CONFIG.wakeName;
     extractPageContent();
     setupEventListeners();
+    updateSendButtonState();
   }
   
   // ===== Update Language Config =====
@@ -148,6 +149,12 @@ const CONFIG = {
   }
   
   
+  function updateSendButtonState() {
+    if (!sendBtn || !textInput) return;
+    const hasText = textInput.value.trim().length > 0;
+    sendBtn.disabled = !hasText || state.isProcessing;
+  }
+
   // ===== Event Listeners =====
   function setupEventListeners() {
     let pressTimer = null;
@@ -208,6 +215,8 @@ const CONFIG = {
     // 发送按钮点击
     sendBtn.addEventListener('click', handleSend);
 
+    textInput.addEventListener('input', updateSendButtonState);
+
     // 输入框回车发送
     textInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -254,10 +263,11 @@ const CONFIG = {
     requestAnimationFrame(() => panel.classList.add('show'));
     trigger.classList.add('active');
     setStatus('就绪');
-  
+
     if (chatArea.children.length === 0) {
       showWelcome();
     }
+    updateSendButtonState();
   }
   
   function closePanel() {
@@ -492,14 +502,14 @@ const CONFIG = {
       state.chatHistory.push({ role: 'assistant', content: reply });
       speak(reply);
       state.isProcessing = false;
-      sendBtn.disabled = false;
+      updateSendButtonState();
       setStatus('就绪');
     } catch (err) {
       removeTypingIndicator();
       addMessage('system', '抱歉，网络似乎出了点问题，请稍后再试');
       console.error('AI Error:', err);
       state.isProcessing = false;
-      sendBtn.disabled = false;
+      updateSendButtonState();
       setStatus('就绪');
     }
   }

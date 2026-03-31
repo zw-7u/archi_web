@@ -257,9 +257,18 @@
           <div class="ast-header-status" id="ast-status">待命中</div>
         </div>
         <button class="ast-close-btn" id="ast-close">&times;</button>
-        <button class="ast-volume-btn active" id="ast-volume" title="朗读开关">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+        <button class="ast-volume-btn active" id="ast-volume" title="朗读已开启" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+            <!-- 喇叭：矩形底座 + 梯形喇叭口 -->
+            <path class="ast-vol-speaker" fill="currentColor" d="M11 5L6 9H3v6h3l5 4V5z"/>
+            <!-- 开启：两道向外扩散的声波弧 -->
+            <path class="ast-vol-wave" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path class="ast-vol-wave" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            <!-- 静音：右侧 X（与声波同区域） -->
+            <g class="ast-vol-mute-x" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M15.5 8l6 8"/>
+              <path d="M21.5 8l-6 8"/>
+            </g>
           </svg>
         </button>
       </div>
@@ -276,7 +285,7 @@
         <button class="ast-voice-btn" id="ast-mic" title="语音输入">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
         </button>
-        <button class="ast-send-btn" id="ast-send" title="发送" disabled>
+        <button class="ast-send-btn" id="ast-send" title="发送" type="button" disabled>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
       </div>
