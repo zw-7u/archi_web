@@ -1,0 +1,185 @@
+/* ==========================================
+   皇城·万象 · 小游戏通用样式
+   ========================================== */
+
+/* ---- 游戏区域 ---- */
+.game-zone {
+  width: 360px;
+  flex-shrink: 0;
+  background: rgba(26, 23, 20, 0.97);
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border-left: 1px solid rgba(197, 151, 59, 0.08);
+}
+
+.game-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--paper-white);
+  margin: 0 0 16px 0;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+/* ---- 游戏容器 ---- */
+.game-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+}
+
+/* Canvas（通用 + 各游戏专用） */
+#game-canvas, #game-canvas-stack, #game-canvas-tower,
+#game-canvas-passage, #game-canvas-dragon {
+  flex: 1;
+  width: 100%;
+  min-height: 200px;
+  background: rgba(13, 10, 8, 0.6);
+  border: 1px solid rgba(197, 151, 59, 0.15);
+  border-radius: 8px;
+  display: block;
+}
+
+/* ---- 游戏UI ---- */
+.game-ui {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.game-btn {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, rgba(197, 151, 59, 0.2), rgba(197, 151, 59, 0.1));
+  border: 1px solid rgba(197, 151, 59, 0.35);
+  border-radius: 6px;
+  color: var(--landing-gold-light, #E8C76A);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  letter-spacing: 0.05em;
+}
+
+.game-btn:hover {
+  background: linear-gradient(135deg, rgba(197, 151, 59, 0.3), rgba(197, 151, 59, 0.2));
+  border-color: rgba(197, 151, 59, 0.6);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(197, 151, 59, 0.2);
+}
+
+.game-btn:active {
+  transform: translateY(0);
+}
+
+/* 分数显示 */
+.game-score, #game-score-stack, #game-score-tower,
+#game-score-passage, #game-score-dragon {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--landing-gold, #C5973B);
+  padding: 8px 16px;
+  background: rgba(197, 151, 59, 0.08);
+  border: 1px solid rgba(197, 151, 59, 0.2);
+  border-radius: 6px;
+  letter-spacing: 0.1em;
+}
+
+/* 最高分 */
+.game-high, #game-high-stack, #game-high-tower, #game-high-dragon {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: rgba(197, 151, 59, 0.6);
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+/* 关卡 */
+.game-level, #game-level-tower {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: #7aaa8a;
+  padding: 6px 12px;
+  background: rgba(122, 170, 138, 0.1);
+  border: 1px solid rgba(122, 170, 138, 0.25);
+  border-radius: 6px;
+  letter-spacing: 0.05em;
+}
+
+/* 步数 */
+.game-moves, #game-moves-passage, #game-moves-dragon {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: rgba(197, 151, 59, 0.7);
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+/* ---- 游戏反馈 ---- */
+.game-feedback, #game-feedback-stack, #game-feedback-tower,
+#game-feedback-passage, #game-feedback-dragon {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.game-feedback p {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink-faint);
+  margin: 0;
+  line-height: 1.6;
+  animation: fadeInUp 0.4s var(--ease-out);
+}
+
+.game-feedback.success p,
+.game-feedback.perfect p {
+  color: #7aaa8a;
+}
+
+.game-feedback.error p,
+.game-feedback.crash p {
+  color: #c03c20;
+}
+
+.game-feedback.complete p,
+.game-feedback.win p {
+  color: var(--landing-gold-light, #E8C76A);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.game-feedback.combo p {
+  color: #ffd700;
+  font-weight: 700;
+}
+
+.game-feedback.hint p {
+  color: #8ab0d0;
+  font-size: 13px;
+}
+
+/* ---- 响应式 ---- */
+@media (max-width: 900px) {
+  .game-zone {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid rgba(197, 151, 59, 0.08);
+    min-height: 280px;
+  }
+
+  #game-canvas, #game-canvas-stack, #game-canvas-tower,
+  #game-canvas-passage, #game-canvas-dragon {
+    min-height: 160px;
+  }
+}

@@ -68,7 +68,6 @@
    html {
      font-size: 16px;
      scroll-behavior: smooth;
-     overflow: hidden;
      height: 100%;
    }
    
@@ -77,10 +76,10 @@
      background: var(--ink-black);
      color: var(--paper-white);
      height: 100%;
-     overflow: hidden;
      cursor: default;
      -webkit-font-smoothing: antialiased;
      -moz-osx-font-smoothing: grayscale;
+     overflow-x: hidden;
    }
    
    /* 选中文字样式 */

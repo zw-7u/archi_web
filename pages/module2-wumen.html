@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>午门 | 皇城·万象</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/building-detail.css">
+  <link rel="stylesheet" href="../css/games.css">
+  <link rel="stylesheet" href="../css/gesture.css">
+  <link rel="stylesheet" href="../css/voice-assistant.css">
+  <link rel="stylesheet" href="../css/language-toggle.css">
+</head>
+<body data-building="wumen">
+
+  <nav class="page-nav">
+    <a href="module1-archive.html" class="nav-back" data-i18n="back_archive">← 返回建筑档案</a>
+    <span class="nav-title">
+      <span class="nav-title-zh" data-i18n="building_wumen">午门</span>
+      <span class="nav-title-en">Meridian Gate</span>
+    </span>
+    <div class="nav-tools">
+      <button id="gesture-toggle" class="gesture-toggle" title="开启/关闭手势控制">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22">
+          <path d="M15 3a2 2 0 012 2v2a2 2 0 01-2 2M9 3a2 2 0 00-2 2v2a2 2 0 002 2M12 14v7M8 18h8M7 9v3a5 5 0 0010 0V9"/>
+        </svg>
+      </button>
+      <button id="language-toggle" class="language-toggle">中文/EN</button>
+    </div>
+  </nav>
+
+  <div id="gesture-indicator" class="gesture-indicator">
+    <div class="gesture-cursor" id="gesture-cursor"></div>
+    <div class="gesture-status" id="gesture-status">
+      <span class="gesture-icon">✋</span>
+      <span class="gesture-label" data-i18n="gesture_on">手势控制已开启</span>
+    </div>
+  </div>
+
+  <main class="building-main">
+    <div class="building-view-top">
+      <div class="building-image-container" id="building-image">
+        <div class="building-image-placeholder">
+          <div class="placeholder-icon">🏛</div>
+          <p>【占位】请插入午门全景图/解剖图</p>
+          <p class="placeholder-path">assets/images/wumen/full.png</p>
+        </div>
+        <div class="highlight-overlay" id="highlight-overlay"></div>
+      </div>
+
+      <div class="component-buttons" id="component-buttons">
+        <button class="comp-btn" data-component="gongquan" style="--comp-color: #7B6B5D">
+          <span data-i18n="comp_gongquan">拱券结构</span>
+        </button>
+        <button class="comp-btn" data-component="zhuanshi" style="--comp-color: #8B8378">
+          <span data-i18n="comp_zhuanshi">城台砖石</span>
+        </button>
+        <button class="comp-btn" data-component="buju" style="--comp-color: #C5973B">
+          <span data-i18n="comp_buju">凹形布局</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="building-view-bottom">
+      <aside class="component-panel" id="component-panel">
+        <div class="panel-empty" id="comp-panel-empty">
+          <div class="empty-icon">👆</div>
+          <p data-i18n="click_component">点击左侧构件按钮查看详情</p>
+        </div>
+        <div class="panel-content hidden" id="comp-panel-content">
+          <h3 class="comp-title" id="comp-title">构件名称</h3>
+          <p class="comp-title-en" id="comp-title-en">English Name</p>
+          <p class="comp-pinyin" id="comp-pinyin">pīnyīn</p>
+          <div class="comp-tabs">
+            <button class="comp-tab active" data-tab="craft" data-i18n="tab_craft">形制与工艺</button>
+            <button class="comp-tab" data-tab="science" data-i18n="tab_science">物理与数学</button>
+            <button class="comp-tab" data-tab="culture" data-i18n="tab_culture">文化与符号</button>
+          </div>
+          <div class="comp-card" id="card-craft">
+            <div class="comp-card-image"><p data-i18n="placeholder_component_img">【占位】构件图片</p></div>
+            <div class="comp-card-text" id="text-craft"><p data-i18n="placeholder_craft_text">【占位】形制与工艺内容，后期自己填写</p></div>
+          </div>
+          <div class="comp-card hidden" id="card-science">
+            <div class="comp-card-image"><p data-i18n="placeholder_component_img">【占位】科学示意图</p></div>
+            <div class="comp-card-text" id="text-science"><p data-i18n="placeholder_science_text">【占位】物理与数学内容，后期自己填写</p></div>
+          </div>
+          <div class="comp-card hidden" id="card-culture">
+            <div class="comp-card-image"><p data-i18n="placeholder_component_img">【占位】文化图片</p></div>
+            <div class="comp-card-text" id="text-culture"><p data-i18n="placeholder_culture_text">【占位】文化与符号内容，后期自己填写</p></div>
+          </div>
+        </div>
+      </aside>
+
+      <div class="game-zone" id="game-zone-passage">
+        <h3 class="game-title" data-i18n="game_passage_title">🎮 御道迷宫</h3>
+        <div class="game-container" id="game-container-passage">
+          <canvas id="game-canvas-passage"></canvas>
+          <div class="game-ui">
+            <button class="game-btn" id="game-start-passage" data-i18n="game_start">开始游戏</button>
+            <button class="game-btn" id="game-restart-passage" data-i18n="game_restart">重新开始</button>
+            <button class="game-btn" id="game-hint-passage" data-i18n="game_hint">提示</button>
+            <div class="game-score" id="game-score-passage">0</div>
+            <div class="game-moves" id="game-moves-passage">0</div>
+          </div>
+          <div class="game-feedback" id="game-feedback-passage"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <button id="voice-assistant-trigger" title="语音助手">
+    <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+  </button>
+  <div id="voice-assistant-panel">
+    <div class="ast-corner tl"></div><div class="ast-corner tr"></div>
+    <div class="ast-corner bl"></div><div class="ast-corner br"></div>
+    <div class="ast-header">
+      <div class="ast-header-icon">🏛</div>
+      <div class="ast-header-text">
+        <div class="ast-header-title" id="ast-name">语音助手</div>
+        <div class="ast-header-status" id="ast-status">待命中</div>
+      </div>
+      <button class="ast-close-btn" id="ast-close">&times;</button>
+      <button class="ast-volume-btn active" id="ast-volume" title="朗读已开启" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+          <path class="ast-vol-speaker" fill="currentColor" d="M11 5L6 9H3v6h3l5 4V5z"/>
+          <path class="ast-vol-wave" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          <path class="ast-vol-wave" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          <g class="ast-vol-mute-x" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M15.5 8l6 8"/><path d="M21.5 8l-6 8"/>
+          </g>
+        </svg>
+      </button>
+    </div>
+    <div class="ast-chat-area" id="ast-chat"></div>
+    <div class="ast-input-area">
+      <input type="text" class="ast-text-input" id="ast-input" placeholder="输入问题或点击麦克风说话..." />
+      <div class="ast-waveform" id="ast-waveform"><span></span><span></span><span></span><span></span><span></span></div>
+      <button class="ast-voice-btn" id="ast-mic" title="语音输入"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg></button>
+      <button class="ast-send-btn" id="ast-send" title="发送" type="button" disabled><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+    </div>
+  </div>
+
+  <script src="../js/gesture.js"></script>
+  <script src="../js/i18n.js"></script>
+  <script src="../js/assistance.js"></script>
+  <script src="../js/wumen.js"></script>
+  <script src="../js/game-imperial-passage.js"></script>
+  <script src="../js/app.js"></script>
+
+</body>
+</html>

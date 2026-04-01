@@ -1,0 +1,319 @@
+/* ==========================================
+   皇城·万象 · 模块二：重点建筑详解页通用样式
+   ========================================== */
+
+/* ---- 页面主容器 ---- */
+.building-main {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding-top: 60px;
+  background: #0d0a08;
+  overflow-y: auto;
+}
+
+/* ---- 上部：建筑图 + 构件按钮 ---- */
+.building-view-top {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* 建筑图片容器 */
+.building-image-container {
+  position: relative;
+  width: 100%;
+  height: 420px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 60%, rgba(197, 151, 59, 0.06) 0%, transparent 50%),
+    linear-gradient(180deg, #0d0a08 0%, #151008 100%);
+}
+
+.building-image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.building-image-placeholder .placeholder-icon {
+  font-size: 72px;
+  opacity: 0.25;
+}
+
+.building-image-placeholder p {
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--ink-faint);
+  margin: 0;
+  letter-spacing: 0.05em;
+}
+
+.building-image-placeholder .placeholder-path {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: rgba(197, 151, 59, 0.3);
+}
+
+/* 高亮叠加层 */
+.highlight-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* ---- 构件按钮栏 ---- */
+.component-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px 24px;
+  background: rgba(26, 23, 20, 0.95);
+  border-top: 1px solid rgba(197, 151, 59, 0.12);
+  border-bottom: 1px solid rgba(197, 151, 59, 0.1);
+}
+
+.comp-btn {
+  padding: 8px 18px;
+  background: rgba(26, 23, 20, 0.8);
+  border: 1px solid rgba(197, 151, 59, 0.25);
+  border-radius: 6px;
+  color: var(--paper-warm);
+  font-family: var(--font-body);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+.comp-btn::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--comp-color, #C5973B);
+  opacity: 0.7;
+  transition: opacity 0.3s;
+}
+
+.comp-btn:hover {
+  background: rgba(197, 151, 59, 0.1);
+  border-color: rgba(197, 151, 59, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.comp-btn:hover::before {
+  opacity: 1;
+}
+
+.comp-btn.active {
+  background: rgba(197, 151, 59, 0.2);
+  border-color: rgba(197, 151, 59, 0.6);
+  color: var(--landing-gold-light, #E8C76A);
+}
+
+.comp-btn.active::before {
+  opacity: 1;
+  width: 4px;
+}
+
+/* ---- 下部：信息面板 + 小游戏 ---- */
+.building-view-bottom {
+  flex: 1;
+  display: flex;
+  gap: 0;
+  min-height: 0;
+}
+
+/* ---- 构件信息面板 ---- */
+.component-panel {
+  flex: 1;
+  background: rgba(26, 23, 20, 0.97);
+  border-right: 1px solid rgba(197, 151, 59, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* 空状态 */
+.component-panel .panel-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.component-panel .empty-icon {
+  font-size: 48px;
+  opacity: 0.4;
+}
+
+.component-panel .panel-empty p {
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--ink-faint);
+  margin: 0;
+}
+
+/* 面板内容 */
+.component-panel .panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: fadeInUp 0.4s var(--ease-out);
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.comp-title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--paper-white);
+  margin: 0;
+  letter-spacing: 0.05em;
+}
+
+.comp-title-en {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-faint);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.comp-pinyin {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: rgba(197, 151, 59, 0.5);
+  font-style: italic;
+  margin: 0;
+}
+
+/* ---- 构件标签页 ---- */
+.comp-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid rgba(197, 151, 59, 0.15);
+  padding-bottom: 12px;
+}
+
+.comp-tab {
+  flex: 1;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid rgba(197, 151, 59, 0.2);
+  border-radius: 6px;
+  color: var(--ink-faint);
+  font-family: var(--font-body);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.comp-tab:hover {
+  border-color: rgba(197, 151, 59, 0.4);
+  color: var(--paper-warm);
+}
+
+.comp-tab.active {
+  background: rgba(197, 151, 59, 0.15);
+  border-color: rgba(197, 151, 59, 0.5);
+  color: var(--landing-gold-light, #E8C76A);
+}
+
+/* ---- 构件卡片 ---- */
+.comp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.comp-card-image {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: rgba(197, 151, 59, 0.05);
+  border: 1px dashed rgba(197, 151, 59, 0.2);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.comp-card-image p {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-faint);
+  margin: 0;
+}
+
+.comp-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.comp-card-text p {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink-light);
+  line-height: 1.8;
+  margin: 0;
+}
+
+/* ---- 响应式 ---- */
+@media (max-width: 900px) {
+  .building-view-bottom {
+    flex-direction: column;
+  }
+
+  .component-panel {
+    border-right: none;
+    border-bottom: 1px solid rgba(197, 151, 59, 0.1);
+    min-height: 300px;
+  }
+
+  .building-image-container {
+    height: 280px;
+  }
+}
+
+@media (max-width: 600px) {
+  .component-buttons {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  .comp-btn {
+    padding: 6px 14px;
+    font-size: 13px;
+  }
+
+  .comp-title {
+    font-size: 22px;
+  }
+
+  .building-image-container {
+    height: 220px;
+  }
+}

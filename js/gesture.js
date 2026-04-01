@@ -54,6 +54,19 @@
     let gestureClickProcessed = false;
     const GESTURE_CLICK_DEBOUNCE = 300;
 
+    // ---- 长按检测（握拳超过1.5秒触发）----
+    let fistStartTs = 0;
+    const LONG_PRESS_MS = 1500;
+    let longPressFired = false;
+
+    // ---- 双击检测（两指点按）----
+    let lastTwoFingerTs = 0;
+    const DOUBLE_TAP_MS = 400;
+
+    // ---- 捏合缩放检测 ----
+    let lastPinchDist = 0;
+    let pinchScale = 1;
+
     // CDN
     const MEDIAPIPE_HANDS_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js';
     const CAMERA_UTILS_URL    = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js';
@@ -144,7 +157,7 @@
         pointer-events: none;
         z-index: 1;
       `;
-      label.textContent = '手掌 ← → 切换 · 指向点击';
+      label.textContent = '手掌←→滑动 · 指向点击 · 双指双击 · 捏合缩放';
       preview.appendChild(label);
       // 提示文案仅显示 1 秒后淡出
       setTimeout(() => {
@@ -300,6 +313,22 @@
         el.closest('.push-preview-close') || el.id === 'gesture-toggle' ||
         el.closest('#gesture-toggle')
       );
+      // 新模块：建筑档案
+      const archiveEl = elements.find(el =>
+        el.classList.contains('building-marker') || el.closest('.building-marker') ||
+        el.classList.contains('archive-card') || el.closest('.archive-card') ||
+        el.classList.contains('tab-btn') || el.closest('.tab-btn')
+      );
+      // 新模块：重点解读
+      const compEl = elements.find(el =>
+        el.classList.contains('comp-btn') || el.closest('.comp-btn') ||
+        el.classList.contains('game-btn') || el.closest('.game-btn')
+      );
+      // 新模块：文化密码
+      const cultureEl = elements.find(el =>
+        el.classList.contains('culture-nav-item') || el.closest('.culture-nav-item') ||
+        el.classList.contains('culture-section') || el.closest('.culture-section')
+      );
 
       const targetEl = hotspotEl
         ? (hotspotEl.classList.contains('hotspot') ? hotspotEl : hotspotEl.closest('.hotspot'))
@@ -307,7 +336,15 @@
             ? (timelineEl.classList.contains('timeline-item') ? timelineEl : timelineEl.closest('.timeline-item'))
             : (aiBtnEl
                 ? (aiBtnEl.closest('.ast-send-btn, .ast-close-btn') || aiBtnEl)
-                : (closeBtnEl ? (closeBtnEl.closest('button') || closeBtnEl) : null)));
+                : (closeBtnEl
+                    ? (closeBtnEl.closest('button') || closeBtnEl)
+                    : (archiveEl
+                        ? (archiveEl.closest('.building-marker, .archive-card, .tab-btn') || archiveEl)
+                        : (compEl
+                            ? (compEl.closest('.comp-btn, .game-btn') || compEl)
+                            : (cultureEl
+                                ? (cultureEl.closest('.culture-nav-item, .culture-section') || cultureEl)
+                                : null))))));
 
       if (targetEl && targetEl !== lastHoveredEl) {
         if (lastHoveredEl) lastHoveredEl.classList.remove('cursor-hover');
@@ -419,16 +456,42 @@
       if (gesture === 'swiping') {
         handleSwiping(lm);
       } else if (gesture === 'fist') {
-        handleFist(lm);
+        // 长按检测：握拳超过1.5秒触发拖拽模式
+        if (fistStartTs > 0 && !longPressFired) {
+          const elapsed = performance.now() - fistStartTs;
+          if (elapsed >= LONG_PRESS_MS) {
+            longPressFired = true;
+            document.dispatchEvent(new CustomEvent('gesture-long-press', {
+              detail: { x: targetX, y: targetY }
+            }));
+            updateGestureStatus('拖拽模式已激活');
+          }
+        }
+      } else if (gesture === 'two-open') {
+        // 双指点击
+        if (detectTwoFingerTap(lm)) {
+          document.dispatchEvent(new CustomEvent('gesture-double-click', {
+            detail: { x: targetX, y: targetY }
+          }));
+          updateGestureStatus('双击');
+        }
       } else if (gesture === 'pointing') {
         // 停留进度在 animateCursor 中处理，此处无需额外操作
+      }
+
+      // 捏合缩放（任何手势均可）
+      const pinchRatio = detectPinchSpread(lm);
+      if (pinchRatio !== 1) {
+        document.dispatchEvent(new CustomEvent('gesture-zoom', {
+          detail: { scale: pinchRatio, x: targetX, y: targetY }
+        }));
       }
     }
 
     /**
      * 基于 MediaPipe Hands 21 点判定单帧手势（无防抖）。
      * @param {Array<{x:number,y:number,z?:number}>} landmarks
-     * @returns {{ state: 'fist'|'pointing'|'palm'|'unknown', fingers: boolean[] }}
+     * @returns {{ state: 'fist'|'pointing'|'palm'|'pinch'|'spread'|'unknown', fingers: boolean[] }}
      *   fingers 顺序：[thumb, index, middle, ring, pinky]
      */
     function detectHandState(landmarks) {
@@ -451,13 +514,72 @@
       if (allBent) {
         return { state: 'fist', fingers };
       }
+
+      // 单食指伸出（指向）
       if (indexExt && !middleExt && !ringExt && !pinkyExt && !thumbExt) {
         return { state: 'pointing', fingers };
       }
+
+      // 两指张开（食指+中指，用于双指点击）
+      if (indexExt && middleExt && !ringExt && !pinkyExt) {
+        return { state: 'two-open', fingers };
+      }
+
+      // 五指张开（手掌）
       if (nExt >= 4) {
         return { state: 'palm', fingers };
       }
+
+      // 三指张开（展开）
+      if (nExt >= 3) {
+        return { state: 'spread', fingers };
+      }
+
       return { state: 'unknown', fingers };
+    }
+
+    /**
+     * 检测捏合手势（拇指+食指靠近）
+     * 返回缩放比例变化（>1 = 张开放大，<1 = 捏合缩小）
+     */
+    function detectPinchSpread(landmarks) {
+      const thumb = landmarks[4];
+      const index = landmarks[8];
+      const mid = landmarks[12];
+      const currentDist = dist(thumb, index);
+      const midDist = dist(thumb, mid);
+
+      if (lastPinchDist === 0) {
+        lastPinchDist = currentDist;
+        return 1;
+      }
+
+      const ratio = currentDist / lastPinchDist;
+      lastPinchDist = currentDist;
+
+      if (ratio > 1.05) return 1.05;
+      if (ratio < 0.95) return 0.95;
+      return 1;
+    }
+
+    /**
+     * 检测双指点击（两指同时点击屏幕）
+     */
+    function detectTwoFingerTap(landmarks) {
+      const index = landmarks[8];
+      const middle = landmarks[12];
+      const indexUp = dist(index, landmarks[0]) > dist(landmarks[6], landmarks[0]);
+      const middleUp = dist(middle, landmarks[0]) > dist(landmarks[10], landmarks[0]);
+
+      const now = performance.now();
+      if (indexUp && middleUp) {
+        if (now - lastTwoFingerTs < DOUBLE_TAP_MS) {
+          lastTwoFingerTs = 0;
+          return true;
+        }
+        lastTwoFingerTs = now;
+      }
+      return false;
     }
 
     function applyStableHandState(rawState) {
@@ -483,6 +605,8 @@
     function mapStableStateToGesture(stable) {
       if (stable === 'fist') return 'fist';
       if (stable === 'pointing') return 'pointing';
+      if (stable === 'two-open') return 'two-open';
+      if (stable === 'spread') return 'spread';
       if (stable === 'palm') return 'swiping';
       return 'swiping';
     }
@@ -509,8 +633,10 @@
             cursor.style.height = '22px';
             cursor.classList.add('fist');
           }
-          if (indicator) updateGestureStatus('握拳 · 移动光标');
-          Scenes.freeze(true);
+          if (indicator) updateGestureStatus('握拳 · 移动光标 / 长按触发拖拽');
+          // 重置长按计时
+          fistStartTs = performance.now();
+          longPressFired = false;
           break;
         case 'pointing':
           if (cursor) {
@@ -519,7 +645,7 @@
             cursor.classList.add('pointing');
           }
           if (indicator) updateGestureStatus('指向 · 停留2秒点击');
-          Scenes.freeze(false);
+          fistStartTs = 0;
           break;
         case 'swiping':
           if (cursor) {
@@ -528,7 +654,25 @@
             cursor.classList.remove('fist', 'pointing');
           }
           if (indicator) updateGestureStatus('手掌 · 左右滑动切换');
-          Scenes.freeze(false);
+          fistStartTs = 0;
+          break;
+        case 'pinch':
+          if (cursor) {
+            cursor.style.width = '16px';
+            cursor.style.height = '16px';
+            cursor.classList.add('pinch');
+          }
+          if (indicator) updateGestureStatus('捏合 · 缩放');
+          fistStartTs = 0;
+          break;
+        case 'spread':
+          if (cursor) {
+            cursor.style.width = '30px';
+            cursor.style.height = '30px';
+            cursor.classList.add('spread');
+          }
+          if (indicator) updateGestureStatus('张开 · 放大');
+          fistStartTs = 0;
           break;
       }
     }
@@ -551,22 +695,15 @@
       if (swipeBuffer.length >= 4) {
         const totalDx = swipeBuffer.reduce((sum, p) => sum + p.dx, 0);
         if (totalDx > SWIPE_THRESHOLD) {
-          Scenes.next();
+          document.dispatchEvent(new CustomEvent('gesture-swipe-right'));
           swipeBuffer = [];
           showSwipeHint('right');
         } else if (totalDx < -SWIPE_THRESHOLD) {
-          Scenes.prev();
+          document.dispatchEvent(new CustomEvent('gesture-swipe-left'));
           swipeBuffer = [];
           showSwipeHint('left');
         }
       }
-    }
-
-    // ─────────────────────────────────────────────
-    // 握拳 → 冻结
-    // ─────────────────────────────────────────────
-    function handleFist(lm) {
-      Scenes.freeze(true);
     }
 
     // ─────────────────────────────────────────────
@@ -596,7 +733,12 @@
         el.closest('#ast-mic') ||
         el.closest('#ast-close') ||
         el.closest('.ast-voice-btn') ||
-        el.closest('.push-preview-close')
+        el.closest('.push-preview-close') ||
+        el.closest('.module-card') ||
+        el.closest('.comp-btn') ||
+        el.closest('.tab-btn') ||
+        el.closest('.game-btn') ||
+        el.closest('.culture-nav-item')
       );
 
       if (target) {
@@ -636,7 +778,8 @@
         cursor.classList.remove('fist', 'pointing', 'clicking', 'dwell-active');
       }
       clearDwellProgress();
-      Scenes.freeze(false);
+      fistStartTs = 0;
+      longPressFired = false;
     }
 
     function updateGestureStatus(text) {
@@ -656,11 +799,27 @@
       if (!hint) {
         hint = document.createElement('div');
         hint.className = `swipe-hint ${direction}`;
-        document.getElementById('scenes-container')?.appendChild(hint);
+        hint.style.cssText = `
+          position: fixed;
+          top: 50%;
+          ${direction === 'right' ? 'right: 30px' : 'left: 30px'};
+          transform: translateY(-50%);
+          background: rgba(200,168,85,0.85);
+          color: #1a0f00;
+          padding: 10px 20px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: bold;
+          z-index: 99999;
+          pointer-events: none;
+          opacity: 0;
+          transition: opacity 0.2s ease;
+        `;
+        document.body.appendChild(hint);
       }
-      hint.textContent = direction === 'right' ? '→ 下一时辰' : '← 上一时辰';
-      hint.classList.add('show');
-      setTimeout(() => hint.classList.remove('show'), 700);
+      hint.textContent = direction === 'right' ? '\u2192 下一项' : '\u2190 上一项';
+      hint.style.opacity = '1';
+      setTimeout(() => { hint.style.opacity = '0'; }, 600);
     }
 
     // ─────────────────────────────────────────────

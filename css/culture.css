@@ -1,0 +1,231 @@
+/* ==========================================
+   皇城·万象 · 模块三：文化密码页样式
+   ========================================== */
+
+/* ---- 页面主容器 ---- */
+.culture-main {
+  padding-top: 60px;
+  background: #0d0a08;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- 侧边锚点导航 ---- */
+.culture-sidenav {
+  position: fixed;
+  top: 80px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 100;
+  padding: 16px;
+  background: rgba(26, 23, 20, 0.9);
+  border: 1px solid rgba(197, 151, 59, 0.15);
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+}
+
+.sidenav-item {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-faint);
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.3s;
+  text-align: right;
+  letter-spacing: 0.05em;
+}
+
+.sidenav-item:hover {
+  color: var(--paper-warm);
+  background: rgba(197, 151, 59, 0.08);
+}
+
+.sidenav-item.active {
+  color: var(--landing-gold-light, #E8C76A);
+  background: rgba(197, 151, 59, 0.12);
+  border-left: 2px solid var(--landing-gold, #C5973B);
+}
+
+/* ---- 文化区块通用样式 ---- */
+.culture-section {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 80px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  border-bottom: 1px solid rgba(197, 151, 59, 0.08);
+  scroll-margin-top: 80px;
+}
+
+.culture-section:last-child {
+  border-bottom: none;
+  padding-bottom: 120px;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 700;
+  color: var(--paper-white);
+  margin: 0;
+  letter-spacing: 0.05em;
+  text-align: center;
+  position: relative;
+}
+
+.section-title::after {
+  content: '';
+  display: block;
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(197, 151, 59, 0.5), transparent);
+  margin: 16px auto 0;
+}
+
+/* ---- 可视化区域 ---- */
+.culture-visual {
+  width: 100%;
+}
+
+.visual-placeholder {
+  width: 100%;
+  aspect-ratio: 16/9;
+  max-height: 400px;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(197, 151, 59, 0.05) 0%, transparent 60%),
+    rgba(26, 23, 20, 0.5);
+  border: 1px dashed rgba(197, 151, 59, 0.15);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.visual-placeholder .placeholder-icon {
+  font-size: 64px;
+  opacity: 0.3;
+}
+
+.visual-placeholder p {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink-faint);
+  margin: 0;
+  text-align: center;
+}
+
+.visual-placeholder .placeholder-path {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: rgba(197, 151, 59, 0.3);
+}
+
+/* ---- 文字区域 ---- */
+.culture-text {
+  max-width: 700px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.culture-text p {
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--ink-light);
+  line-height: 2;
+  margin: 0;
+}
+
+/* ---- 表格区域 ---- */
+.culture-table-wrapper {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid rgba(197, 151, 59, 0.15);
+}
+
+.culture-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body);
+}
+
+.culture-table thead {
+  background: rgba(197, 151, 59, 0.08);
+}
+
+.culture-table th {
+  padding: 12px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--landing-gold, #C5973B);
+  letter-spacing: 0.1em;
+  text-align: center;
+  border-bottom: 1px solid rgba(197, 151, 59, 0.2);
+}
+
+.culture-table td {
+  padding: 12px 20px;
+  font-size: 14px;
+  color: var(--ink-light);
+  text-align: center;
+  border-bottom: 1px solid rgba(197, 151, 59, 0.06);
+  line-height: 1.6;
+}
+
+.culture-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.culture-table tbody tr:hover td {
+  background: rgba(197, 151, 59, 0.04);
+}
+
+/* ---- 响应式 ---- */
+@media (max-width: 900px) {
+  .culture-sidenav {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 16px auto 0;
+    max-width: 600px;
+    border-radius: 8px;
+  }
+
+  .sidenav-item {
+    text-align: center;
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  .culture-section {
+    padding: 60px 24px;
+  }
+}
+
+@media (max-width: 600px) {
+  .culture-section {
+    padding: 48px 20px;
+  }
+
+  .section-title {
+    font-size: 22px;
+  }
+
+  .culture-text p {
+    font-size: 15px;
+    text-align: left;
+  }
+
+  .culture-table th,
+  .culture-table td {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+}

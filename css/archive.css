@@ -1,0 +1,467 @@
+/* ==========================================
+   皇城·万象 · 模块一：建筑档案总览图
+   ========================================== */
+
+/* ---- 子页面通用导航 ---- */
+.page-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: rgba(13, 10, 8, 0.92);
+  border-bottom: 1px solid rgba(197, 151, 59, 0.15);
+  backdrop-filter: blur(10px);
+}
+
+.page-nav .nav-back {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--landing-gold, #C5973B);
+  text-decoration: none;
+  transition: color 0.3s;
+  flex-shrink: 0;
+}
+
+.page-nav .nav-back:hover {
+  color: var(--landing-gold-light, #E8C76A);
+}
+
+.page-nav .nav-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.page-nav .nav-title-zh {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--paper-white);
+  letter-spacing: 0.05em;
+}
+
+.page-nav .nav-title-en {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--ink-faint);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.page-nav .nav-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* ---- 页面主容器 ---- */
+.archive-main {
+  display: flex;
+  height: 100vh;
+  padding-top: 60px;
+  background: #0d0a08;
+}
+
+/* ---- 左侧地图容器 ---- */
+.archive-map-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.map-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(197, 151, 59, 0.05) 0%, transparent 60%),
+    linear-gradient(180deg, #0d0a08 0%, #1a1208 100%);
+  border-right: 1px solid rgba(197, 151, 59, 0.1);
+}
+
+.placeholder-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  padding: 40px;
+}
+
+.placeholder-icon {
+  font-size: 64px;
+  opacity: 0.3;
+}
+
+.placeholder-main {
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--ink-faint);
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.placeholder-path {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: rgba(197, 151, 59, 0.3);
+  margin: 0;
+}
+
+/* ---- 建筑标记 ---- */
+.building-markers {
+  position: absolute;
+  inset: 0;
+}
+
+.building-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  z-index: 10;
+  transition: all 0.3s;
+}
+
+.marker-dot {
+  display: block;
+  width: 14px;
+  height: 14px;
+  background: rgba(197, 151, 59, 0.7);
+  border: 2px solid rgba(197, 151, 59, 0.9);
+  border-radius: 50%;
+  transition: all 0.3s;
+  box-shadow: 0 0 8px rgba(197, 151, 59, 0.3);
+}
+
+.building-marker:hover .marker-dot,
+.building-marker.active .marker-dot {
+  background: var(--landing-gold-light, #E8C76A);
+  box-shadow: 0 0 16px rgba(197, 151, 59, 0.6);
+  transform: scale(1.3);
+}
+
+/* 重点建筑：更大 + 金色 + 星号 */
+.building-marker.featured .marker-dot {
+  width: 18px;
+  height: 18px;
+  background: var(--landing-gold, #C5973B);
+  box-shadow: 0 0 12px rgba(197, 151, 59, 0.5);
+}
+
+.marker-label {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--paper-warm);
+  white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  opacity: 0;
+  transform: translateY(4px);
+  transition: all 0.3s;
+}
+
+.building-marker:hover .marker-label,
+.building-marker.active .marker-label {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.building-marker.featured .marker-label {
+  color: var(--landing-gold-light, #E8C76A);
+  font-weight: 600;
+}
+
+/* ---- 右侧信息面板 ---- */
+.archive-panel {
+  width: 380px;
+  flex-shrink: 0;
+  background: rgba(26, 23, 20, 0.95);
+  border-left: 1px solid rgba(197, 151, 59, 0.12);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* 空状态 */
+.panel-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.panel-empty .empty-icon {
+  font-size: 48px;
+  opacity: 0.4;
+}
+
+.panel-empty p {
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--ink-faint);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* 面板内容 */
+.panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fadeInUp 0.4s var(--ease-out);
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- 标签切换 ---- */
+.panel-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid rgba(197, 151, 59, 0.15);
+  padding-bottom: 12px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid rgba(197, 151, 59, 0.2);
+  border-radius: 6px;
+  color: var(--ink-faint);
+  font-family: var(--font-body);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.tab-btn:hover {
+  border-color: rgba(197, 151, 59, 0.4);
+  color: var(--paper-warm);
+}
+
+.tab-btn.active {
+  background: rgba(197, 151, 59, 0.15);
+  border-color: rgba(197, 151, 59, 0.5);
+  color: var(--landing-gold-light, #E8C76A);
+}
+
+/* ---- 档案卡 ---- */
+.archive-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.card-images {
+  width: 100%;
+  aspect-ratio: 4/3;
+  background: rgba(197, 151, 59, 0.05);
+  border: 1px dashed rgba(197, 151, 59, 0.2);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-image-placeholder {
+  text-align: center;
+}
+
+.card-image-placeholder p {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-faint);
+  margin: 0;
+}
+
+.card-name {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--paper-white);
+  margin: 0;
+  letter-spacing: 0.05em;
+}
+
+.card-name-en {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink-faint);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+/* 档案信息列表 */
+.card-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid rgba(197, 151, 59, 0.1);
+  padding-top: 12px;
+}
+
+.card-info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.info-label {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink-faint);
+  flex-shrink: 0;
+  letter-spacing: 0.05em;
+}
+
+.info-value {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--paper-warm);
+  text-align: right;
+}
+
+/* 趣闻 */
+.card-trivia {
+  background: rgba(197, 151, 59, 0.06);
+  border-left: 3px solid rgba(197, 151, 59, 0.3);
+  padding: 10px 14px;
+  border-radius: 0 6px 6px 0;
+}
+
+.card-trivia p {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-light);
+  margin: 0;
+  line-height: 1.7;
+}
+
+/* 探索按钮 */
+.explore-wisdom-btn {
+  display: block;
+  text-align: center;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, rgba(197, 151, 59, 0.2), rgba(197, 151, 59, 0.1));
+  border: 1px solid rgba(197, 151, 59, 0.4);
+  border-radius: 8px;
+  color: var(--landing-gold-light, #E8C76A);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s;
+  letter-spacing: 0.05em;
+}
+
+.explore-wisdom-btn:hover {
+  background: linear-gradient(135deg, rgba(197, 151, 59, 0.3), rgba(197, 151, 59, 0.2));
+  border-color: rgba(197, 151, 59, 0.6);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(197, 151, 59, 0.2);
+}
+
+/* ---- 事件卡 ---- */
+.event-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.event-card h4 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--paper-white);
+  margin: 0;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(197, 151, 59, 0.1);
+  padding-bottom: 8px;
+}
+
+.event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.event-item {
+  background: rgba(26, 23, 20, 0.6);
+  border: 1px solid rgba(197, 151, 59, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.event-item h5 {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--landing-gold-light, #E8C76A);
+  margin: 0 0 6px 0;
+}
+
+.event-item p {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-light);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ---- 响应式 ---- */
+@media (max-width: 900px) {
+  .archive-main {
+    flex-direction: column;
+  }
+
+  .archive-map-container {
+    height: 50vh;
+    border-right: none;
+    border-bottom: 1px solid rgba(197, 151, 59, 0.1);
+  }
+
+  .archive-panel {
+    width: 100%;
+    height: 50vh;
+    border-left: none;
+    border-top: 1px solid rgba(197, 151, 59, 0.12);
+  }
+}
+
+@media (max-width: 480px) {
+  .page-nav {
+    padding: 10px 16px;
+  }
+
+  .page-nav .nav-title-zh {
+    font-size: 15px;
+  }
+
+  .archive-panel {
+    padding: 16px;
+  }
+
+  .card-name {
+    font-size: 20px;
+  }
+}

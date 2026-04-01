@@ -1,0 +1,367 @@
+{
+  "buildings": [
+    {
+      "id": "taihedian",
+      "name": "太和殿",
+      "nameEn": "Hall of Supreme Harmony",
+      "position": { "x": 520, "y": 320 },
+      "level": 1,
+      "area": "外朝",
+      "built": "明永乐十八年（1420年）",
+      "rebuilt": "清康熙三十四年（1695年）",
+      "function": "举行大典、皇帝登基、庆寿、元旦受贺",
+      "description": "紫禁城中轴线上规模最大、等级最高的殿堂，明清两代皇权的象征。",
+      "highlights": [
+        "中国现存体量最大、等级最高的木结构宫殿建筑",
+        "殿顶覆盖黄色琉璃瓦，脊兽数量最多（10个）",
+        "殿内金砖铺地，梁枋施龙凤和玺彩画",
+        "设有御道须弥座和贴金漆朱漆柱"
+      ],
+      "events": [
+        {
+          "year": "1420",
+          "title": "太和殿落成",
+          "desc": "明成祖朱棣迁都北京，太和殿首次建成启用。"
+        },
+        {
+          "year": "1644",
+          "title": "顺治帝登基",
+          "desc": "清世祖福临在此登基，开启清朝统治。"
+        },
+        {
+          "year": "1912",
+          "title": "溥仪退位",
+          "desc": "清帝溥仪在太和殿宣布退位，结束封建帝制。"
+        }
+      ]
+    },
+    {
+      "id": "zhonghedian",
+      "name": "中和殿",
+      "nameEn": "Hall of Central Harmony",
+      "position": { "x": 480, "y": 280 },
+      "level": 2,
+      "area": "外朝",
+      "built": "明永乐十八年（1420年）",
+      "rebuilt": "清康熙三十四年（1695年）",
+      "function": "皇帝大典前休息、接受官员跪拜、审阅奏章",
+      "description": "外朝三殿中体量最小的殿宇，位于太和殿与保和殿之间，形制独特。",
+      "highlights": [
+        "方形攒尖顶，覆黄色琉璃瓦",
+        "殿内设有皇帝的「明窗」御座",
+        "殿名取《中庸》「中也者，天下之大本也」之意"
+      ],
+      "events": []
+    },
+    {
+      "id": "baoheyuan",
+      "name": "保和殿",
+      "nameEn": "Hall of Preserving Harmony",
+      "position": { "x": 440, "y": 320 },
+      "level": 3,
+      "area": "外朝",
+      "built": "明永乐十八年（1420年）",
+      "rebuilt": "清康熙三十四年（1695年）",
+      "function": "科举殿试、皇帝宴会、春节赐宴外藩",
+      "description": "外朝三大殿的最后一殿，明代曾为皇太子受贺场所，清代用于举行科举最高级别的殿试。",
+      "highlights": [
+        "殿试在此举行，天下学子梦寐以求之地",
+        "梁枋施金龙和玺彩画",
+        "地面为金砖，金砖产自苏州"
+      ],
+      "events": []
+    },
+    {
+      "id": "jiaolou",
+      "name": "角楼",
+      "nameEn": "Corner Tower",
+      "position": { "x": 600, "y": 200 },
+      "level": 4,
+      "area": "城垣",
+      "built": "明永乐四年（1406年）",
+      "rebuilt": "明正统四年（1439年）",
+      "function": "防御瞭望、护城巡逻",
+      "description": "紫禁城四角的标志性建筑，以其精巧的构造和优美的轮廓著称，是中国古代城防建筑的杰作。",
+      "highlights": [
+        "九梁十八柱七十二条脊，构造极其复杂",
+        "三重檐歇山顶，曲线优美如展翅飞鸟",
+        "内外檐装修隔扇、三交六椀菱花窗",
+        "榫卯结构达到力学与美学的完美统一"
+      ],
+      "events": []
+    },
+    {
+      "id": "wumen",
+      "name": "午门",
+      "nameEn": "Meridian Gate",
+      "position": { "x": 520, "y": 400 },
+      "level": 5,
+      "area": "宫门",
+      "built": "明永乐十八年（1420年）",
+      "rebuilt": "清顺治四年（1647年）",
+      "function": "宫城正门、献俘仪式、出征凯旋",
+      "description": "紫禁城的正门，五座门楼组成的建筑群，中间三门为皇帝御道，两侧为王公百官通行。",
+      "highlights": [
+        "「凹」字形平面造型，气势恢宏",
+        "中门为皇帝专用，新科进士可走一次",
+        "两侧门洞王公走左侧，文武百官走右侧",
+        "举行献俘大典「廷仗」之地"
+      ],
+      "events": []
+    },
+    {
+      "id": "jiulongbi",
+      "name": "九龙壁",
+      "nameEn": "Nine-Dragon Screen",
+      "position": { "x": 650, "y": 450 },
+      "level": 6,
+      "area": "内廷",
+      "built": "清乾隆三十六年（1771年）",
+      "function": "建筑装饰、障隔空间、象征皇权",
+      "description": "位于皇极门外，高3.5米、长29.4米的琉璃影壁，以九龙戏珠为主题，是中国现存最精美的九龙壁之一。",
+      "highlights": [
+        "由270个琉璃块拼接而成，九龙形态各异",
+        "采用高浮雕与浅浮雕相结合的技法",
+        "龙身覆盖鳞片纹，琉璃釉彩分黄、蓝、白、青多色",
+        "「龙咬吞脊」造型，九龙戏珠意境深远"
+      ],
+      "events": []
+    },
+    {
+      "id": "qianqinggong",
+      "name": "乾清宫",
+      "nameEn": "Palace of Heavenly Purity",
+      "position": { "x": 520, "y": 240 },
+      "level": 7,
+      "area": "内廷",
+      "built": "明永乐十八年（1420年）",
+      "rebuilt": "清嘉庆二年（1797年）",
+      "function": "皇帝寝宫、日常理政、召见大臣",
+      "description": "内廷正殿，明清两代皇帝的日常起居和处理政务之所。",
+      "highlights": [
+        "「正大光明」匾额悬于殿内",
+        "殿内设有皇帝宝座和御案",
+        "康熙帝在此举行千叟宴"
+      ],
+      "events": []
+    },
+    {
+      "id": "kunninggong",
+      "name": "坤宁宫",
+      "nameEn": "Palace of Earthly Tranquility",
+      "position": { "x": 520, "y": 200 },
+      "level": 8,
+      "area": "内廷",
+      "built": "明永乐十八年（1420年）",
+      "rebuilt": "清顺治十二年（1655年）",
+      "function": "皇后寝宫、萨满祭祀场所",
+      "description": "内廷第三宫，清代改为皇后寝宫及萨满祭祀场所。",
+      "highlights": [
+        "清代改为祭祀场所，设祭神杆",
+        "东暖阁为皇帝大婚洞房"
+      ],
+      "events": []
+    },
+    {
+      "id": "jiaotaidian",
+      "name": "交泰殿",
+      "nameEn": "Hall of Celestial and Terrestrial Union",
+      "position": { "x": 520, "y": 220 },
+      "level": 9,
+      "area": "内廷",
+      "built": "明永乐十八年（1420年）",
+      "rebuilt": "清嘉庆二年（1797年）",
+      "function": "皇后寿诞、存放宝玺、举行册封礼",
+      "description": "乾清宫与坤宁宫之间，取「天地交泰」之意。",
+      "highlights": [
+        "方形殿顶，覆蓝色琉璃瓦（仅此一例）",
+        "殿内保存有代表皇权的二十五宝玺",
+        "自鸣钟为其重要陈设"
+      ],
+      "events": []
+    },
+    {
+      "id": "shenwumen",
+      "name": "神武门",
+      "nameEn": "Gate of Divine Might",
+      "position": { "x": 520, "y": 100 },
+      "level": 10,
+      "area": "宫门",
+      "built": "明永乐十八年（1420年）",
+      "rebuilt": "清康熙十三年（1674年）",
+      "function": "宫城北门、皇帝出行、宫人出入",
+      "description": "紫禁城北门，是皇帝和后妃出入宫城的通道之一。",
+      "highlights": [
+        "门楼上悬「神武门」匾额，乾隆皇帝御笔",
+        "设有钟鼓楼，报时功能"
+      ],
+      "events": []
+    },
+    {
+      "id": "donghuamen",
+      "name": "东华门",
+      "nameEn": "East Gate of Supreme Harmony",
+      "position": { "x": 650, "y": 280 },
+      "level": 11,
+      "area": "宫门",
+      "built": "明永乐十八年（1420年）",
+      "function": "文官出入、书籍经文入宫、皇帝梓宫出殡",
+      "description": "紫禁城东门，为文官出入专用之门，也是皇帝死后灵柩外出的通道。",
+      "highlights": [
+        "门钉数量为九行九列（其他门为九行九列，个别为减数）",
+        "清代皇帝死后棺木由此门出"
+      ],
+      "events": []
+    },
+    {
+      "id": "xihuamen",
+      "name": "西华门",
+      "nameEn": "West Gate of Supreme Harmony",
+      "position": { "x": 380, "y": 280 },
+      "level": 12,
+      "area": "宫门",
+      "built": "明永乐十八年（1420年）",
+      "function": "武官出入、太后太后太妃出入",
+      "description": "紫禁城西门，为武官出入通道，与东华门相对。",
+      "highlights": [
+        "与东华门形制对称",
+        "武官及内廷后妃出入使用"
+      ],
+      "events": []
+    },
+    {
+      "id": "wenyuange",
+      "name": "文渊阁",
+      "nameEn": "Imperial Library",
+      "position": { "x": 680, "y": 240 },
+      "level": 13,
+      "area": "内廷",
+      "built": "明永乐十八年（1420年）",
+      "rebuilt": "清乾隆四十一年（1776年）",
+      "function": "藏书阁、收藏《四库全书》",
+      "description": "紫禁城中最大藏书建筑，为收藏《四库全书》而建，是中国古代藏书楼的典范。",
+      "highlights": [
+        "黑琉璃瓦绿剪边顶（水克火之意）",
+        "仿浙江宁波范氏天一阁形制",
+        "采用「明二暗三」结构增加藏书空间"
+      ],
+      "events": []
+    },
+    {
+      "id": "huangjincheng",
+      "name": "皇极殿",
+      "nameEn": "Hall of Imperial Splendor",
+      "position": { "x": 650, "y": 430 },
+      "level": 14,
+      "area": "外东",
+      "built": "清乾隆三十六年（1771年）",
+      "function": "乾隆帝归政退位后受贺场所",
+      "description": "位于宁寿宫区，为乾隆皇帝「归政」后使用，形制仿太和殿。",
+      "highlights": [
+        "乾隆帝退位后在此接受元旦朝贺",
+        "形制仅次于太和殿，等级极高"
+      ],
+      "events": []
+    },
+    {
+      "id": "gongqinggong",
+      "name": "宫前宫",
+      "nameEn": "Palace of Universal Happiness",
+      "position": { "x": 660, "y": 480 },
+      "level": 15,
+      "area": "外东",
+      "built": "清乾隆四十一年（1776年）",
+      "function": "乾隆太上皇宫殿",
+      "description": "宁寿宫区主体建筑之一，为乾隆帝当太上皇时所居。",
+      "highlights": [
+        "建筑名称取自《尚书》五福",
+        "内部装饰极为精美"
+      ],
+      "events": []
+    },
+    {
+      "id": "yangxindian",
+      "name": "养心殿",
+      "nameEn": "Hall of Mental Cultivation",
+      "position": { "x": 580, "y": 230 },
+      "level": 16,
+      "area": "内廷",
+      "built": "明永乐十八年（1420年）",
+      "rebuilt": "清雍正元年（1723年）",
+      "function": "皇帝日常起居、读书、召见官员、处理政务",
+      "description": "清代皇帝的起居和理政中心，自雍正帝起成为实际上的执政中心。",
+      "highlights": [
+        "「中正仁和」匾额为其核心精神",
+        "三希堂为皇帝书房",
+        "自雍正起历代皇帝均在此处理政务"
+      ],
+      "events": []
+    },
+    {
+      "id": "changchunyuan",
+      "name": "长春园",
+      "nameEn": "Garden of Eternal Spring",
+      "position": { "x": 720, "y": 520 },
+      "level": 17,
+      "area": "三山五园",
+      "built": "清乾隆十二年（1747年）",
+      "function": "皇家园林、乾隆帝休闲之所",
+      "description": "圆明园附园之一，仿西湖「断桥残雪」建有小金鱼池。",
+      "highlights": [
+        "仿江南园林风格建造",
+        "有如园、茜园等小园"
+      ],
+      "events": []
+    },
+    {
+      "id": "wan chilun",
+      "name": "万寿山",
+      "nameEn": "Longevity Hill",
+      "position": { "x": 750, "y": 580 },
+      "level": 18,
+      "area": "三山五园",
+      "built": "清乾隆十五年（1750年）",
+      "function": "皇家园林、礼佛场所",
+      "description": "清漪园主山，为佛香阁所在，可俯瞰昆明湖。",
+      "highlights": [
+        "佛香阁为万寿山标志性建筑",
+        "排云殿为祝寿场所"
+      ],
+      "events": []
+    },
+    {
+      "id": "kunminghu",
+      "name": "昆明湖",
+      "nameEn": "Kunming Lake",
+      "position": { "x": 750, "y": 620 },
+      "level": 19,
+      "area": "三山五园",
+      "built": "清乾隆十五年（1750年）",
+      "function": "皇家园林、蓄水防洪、泛舟游览",
+      "description": "颐和园内最大水面，以杭州西湖为蓝本开凿而成。",
+      "highlights": [
+        "湖面仿杭州西湖「苏堤」建西堤",
+        "十七孔桥横卧湖面",
+        "铜牛卧于湖畔，寓意镇水"
+      ],
+      "events": []
+    },
+    {
+      "id": "taizhouzhou",
+      "name": "太液池",
+      "nameEn": "Taiye Pool",
+      "position": { "x": 300, "y": 500 },
+      "level": 20,
+      "area": "三海",
+      "built": "辽代始建",
+      "function": "皇家园林水域、宴饮泛舟",
+      "description": "北海、中海、南海的总称，是北京内城最重要的皇家园林水域。",
+      "highlights": [
+        "北海白塔为标志性建筑",
+        "琼华岛藏有『移山太湖石』",
+        "中海有「水云榭」景观"
+      ],
+      "events": []
+    }
+  ]
+}

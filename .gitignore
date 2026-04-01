@@ -8,6 +8,8 @@ netlify/
 # Exception: keep Netlify Functions in git
 # (already in netlify/ folder, will be deployed)
 
+teachme.md
+
 # Netlify
 .netlify/
 
