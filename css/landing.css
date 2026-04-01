@@ -338,7 +338,7 @@
 }
 
 /* ---- 手势光标在首页也显示 ---- */
-body.mouse-cursor-active .gesture-cursor {
+body.gesture-mode .gesture-cursor {
   opacity: 1;
 }
 

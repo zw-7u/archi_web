@@ -383,8 +383,8 @@
 .ast-send-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
 
 /* 手势模式 hover 反馈 */
-body.mouse-cursor-active .ast-send-btn:hover,
-body.mouse-cursor-active .ast-close-btn:hover {
+body.gesture-mode .ast-send-btn:hover,
+body.gesture-mode .ast-close-btn:hover {
   transform: scale(1.1);
   box-shadow: 0 2px 8px rgba(197,151,59,0.25);
 }

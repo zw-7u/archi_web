@@ -2,7 +2,7 @@
    手势交互 · 光标 & 状态指示器
    ========================================== */
 
-/* 手势光标容器 */
+/* 手势光标容器（fixed overlay） */
 #gesture-indicator {
   position: fixed;
   inset: 0;
@@ -10,62 +10,69 @@
   z-index: 8999;
 }
 
-/* 未进入主流程前隐藏金色光标 */
-body:not(.app-in-scenes) .gesture-cursor {
-  opacity: 0 !important;
-  visibility: hidden;
-}
-
-body.app-in-scenes .gesture-cursor {
-  visibility: visible;
-}
-
-/* ---- 手势光标 ---- */
+/* ---- 手势光标（金色光圈） ---- */
 .gesture-cursor {
   position: fixed;
-  width: 26px;
-  height: 26px;
-  border: 2px solid var(--gold);
-  border-radius: 50%;
+  width: 28px;
+  height: 28px;
   pointer-events: none;
   z-index: 9000;
   transform: translate(-50%, -50%);
   opacity: 0;
+  visibility: hidden;
+  /* 金色边框光圈 */
+  border: 2.5px solid var(--gold);
+  border-radius: 50%;
   box-shadow:
-    0 0 12px rgba(200, 168, 85, 0.3),
-    0 0 24px rgba(200, 168, 85, 0.1);
+    0 0 10px rgba(200, 168, 85, 0.4),
+    0 0 22px rgba(200, 168, 85, 0.18),
+    inset 0 0 6px rgba(200, 168, 85, 0.08);
+  background: radial-gradient(circle at center,
+    rgba(200, 168, 85, 0.15) 0%,
+    rgba(200, 168, 85, 0.05) 40%,
+    transparent 70%
+  );
   transition:
-    width 0.2s ease,
-    height 0.2s ease,
-    border-color 0.2s ease,
+    width 0.18s ease,
+    height 0.18s ease,
+    border-color 0.18s ease,
     box-shadow 0.2s ease,
-    opacity 0.3s ease;
-  /* CSS 自定义属性用于 conic-gradient 进度 */
-  --dwell-progress: 0;
-  background: transparent;
+    opacity 0.3s ease,
+    transform 0.08s ease;
 }
 
-/* 主场景显示光标 */
-body.mouse-cursor-active .gesture-cursor {
+/* 手势开启时：光圈出现 + 隐藏系统光标 */
+body.gesture-mode .gesture-cursor {
   opacity: 1;
+  visibility: visible;
 }
 
+body.gesture-mode {
+  cursor: none !important;
+}
+
+body.gesture-mode * {
+  cursor: none !important;
+}
+
+/* 光圈始终可见时 */
 .gesture-cursor.visible {
-  opacity: 1 !important;
+  opacity: 1;
+  visibility: visible;
 }
 
-/* 光标中心点 */
+/* 中心金色小点 */
 .gesture-cursor::before {
   content: '';
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 6px;
-  height: 6px;
-  background: var(--gold);
+  width: 5px;
+  height: 5px;
+  background: radial-gradient(circle, #ffd700 0%, var(--gold) 100%);
   border-radius: 50%;
-  opacity: 0.85;
+  box-shadow: 0 0 4px rgba(255, 215, 0, 0.8);
   z-index: 1;
 }
 
@@ -76,21 +83,22 @@ body.mouse-cursor-active .gesture-cursor {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 40px;
-  height: 40px;
-  border: 1px solid rgba(200, 168, 85, 0.18);
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(200, 168, 85, 0.22);
   border-radius: 50%;
-  animation: cursorPulse 1.6s ease-out infinite;
+  animation: cursorPulse 1.8s ease-out infinite;
+  pointer-events: none;
 }
 
-/* 2秒停留 SVG 进度环（追加到 ::after 后面作为同级元素） */
+/* 2秒停留 SVG 进度环 */
 .gesture-cursor .dwell-ring {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) rotate(-90deg);
-  width: 50px;
-  height: 50px;
+  width: 52px;
+  height: 52px;
   pointer-events: none;
   display: none;
 }
@@ -101,60 +109,94 @@ body.mouse-cursor-active .gesture-cursor {
 
 .gesture-cursor.dwell-active::after {
   animation: none;
-  border-color: rgba(90, 138, 106, 0.12);
+  border-color: rgba(90, 138, 106, 0.1);
 }
 
 @keyframes cursorPulse {
-  0%   { width: 26px; height: 26px; opacity: 0.5; }
-  100% { width: 64px; height: 64px; opacity: 0; }
+  0%   { width: 28px; height: 28px; opacity: 0.45; }
+  100% { width: 68px; height: 68px; opacity: 0; }
 }
 
 /* ---- 手势状态样式 ---- */
 
-/* 握拳：缩小，深色内核 */
+/* 握拳：缩小，浅金内核 */
 .gesture-cursor.fist {
-  width: 22px !important;
-  height: 22px !important;
-  border-color: rgba(200, 168, 85, 0.5);
-  background: rgba(200, 168, 85, 0.08);
+  width: 20px !important;
+  height: 20px !important;
+  border-color: rgba(200, 168, 85, 0.55);
+  background: radial-gradient(circle at center,
+    rgba(200, 168, 85, 0.18) 0%,
+    rgba(200, 168, 85, 0.06) 50%,
+    transparent 75%
+  );
   box-shadow:
-    0 0 10px rgba(200, 168, 85, 0.2),
-    0 0 20px rgba(200, 168, 85, 0.1);
-}
-.gesture-cursor.fist::before {
-  width: 8px;
-  height: 8px;
-  background: rgba(200, 168, 85, 0.6);
+    0 0 8px rgba(200, 168, 85, 0.25),
+    0 0 18px rgba(200, 168, 85, 0.12);
 }
 
-/* 食指指向：细小绿环 */
-.gesture-cursor.pointing {
-  width: 18px !important;
-  height: 18px !important;
-  border-color: rgba(90, 138, 106, 0.8);
-  box-shadow:
-    0 0 8px rgba(90, 138, 106, 0.4),
-    0 0 16px rgba(90, 138, 106, 0.2);
-  background: rgba(90, 138, 106, 0.15);
+.gesture-cursor.fist::before {
+  width: 7px;
+  height: 7px;
+  background: radial-gradient(circle, rgba(200, 168, 85, 0.9) 0%, rgba(200, 168, 85, 0.5) 100%);
 }
+
+/* 食指指向：细绿环 */
+.gesture-cursor.pointing {
+  width: 16px !important;
+  height: 16px !important;
+  border-color: rgba(90, 138, 106, 0.85);
+  background: radial-gradient(circle at center,
+    rgba(90, 138, 106, 0.2) 0%,
+    rgba(90, 138, 106, 0.08) 50%,
+    transparent 75%
+  );
+  box-shadow:
+    0 0 10px rgba(90, 138, 106, 0.45),
+    0 0 20px rgba(90, 138, 106, 0.2);
+}
+
 .gesture-cursor.pointing::before {
   width: 4px;
   height: 4px;
   background: var(--jade);
+  box-shadow: 0 0 4px rgba(90, 138, 106, 0.9);
 }
+
 .gesture-cursor.pointing::after {
-  width: 30px;
-  height: 30px;
-  border-color: rgba(90, 138, 106, 0.15);
+  width: 32px;
+  height: 32px;
+  border-color: rgba(90, 138, 106, 0.18);
+}
+
+/* 捏合缩放 */
+.gesture-cursor.pinch {
+  width: 14px !important;
+  height: 14px !important;
+  border-color: rgba(200, 168, 85, 0.7);
+  background: radial-gradient(circle, rgba(200, 168, 85, 0.25) 0%, transparent 70%);
+}
+
+.gesture-cursor.spread {
+  width: 36px !important;
+  height: 36px !important;
+  border-color: rgba(200, 168, 85, 0.5);
+  background: radial-gradient(circle, rgba(200, 168, 85, 0.1) 0%, transparent 70%);
 }
 
 /* 点击动画 */
 .gesture-cursor.clicking {
-  transform: translate(-50%, -50%) scale(0.65) !important;
+  transform: translate(-50%, -50%) scale(0.6) !important;
   border-color: var(--vermilion) !important;
-  box-shadow: 0 0 28px rgba(192, 60, 32, 0.7) !important;
-  transition: transform 0.08s ease, box-shadow 0.08s ease !important;
-  background: transparent;
+  box-shadow:
+    0 0 24px rgba(192, 60, 32, 0.75),
+    0 0 48px rgba(192, 60, 32, 0.35) !important;
+  transition: transform 0.07s ease, box-shadow 0.07s ease !important;
+  background: radial-gradient(circle, rgba(192, 60, 32, 0.2) 0%, transparent 70%);
+}
+
+.gesture-cursor.clicking::before {
+  background: var(--vermilion);
+  box-shadow: 0 0 6px rgba(192, 60, 32, 0.9);
 }
 
 /* ---- 手势状态指示条 ---- */
@@ -192,19 +234,13 @@ body.mouse-cursor-active .gesture-cursor {
   white-space: nowrap;
 }
 
-/* ---- 手势开关（置于 .top-toolbar 内，与语言切换同一行；摄像头在双语左侧） ---- */
+/* ---- 手势开关按钮 ---- */
 .gesture-toggle {
-  position: relative;
-  top: auto;
-  left: auto;
-  right: auto;
-  z-index: auto;
   width: 44px;
   height: 44px;
   background: rgba(26, 23, 20, 0.75);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(74, 66, 54, 0.6);
-  /* 未激活：灰暗色调 */
   color: rgba(184, 169, 142, 0.4);
   border-radius: 8px;
   cursor: pointer;
@@ -212,10 +248,8 @@ body.mouse-cursor-active .gesture-cursor {
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
-  pointer-events: auto;
 }
 
-/* 开启状态：金色 + 光晕；hover 保持金色系不变 */
 .gesture-toggle:hover {
   border-color: rgba(200, 168, 85, 0.55);
   color: rgba(200, 168, 85, 0.65);
@@ -238,36 +272,34 @@ body.mouse-cursor-active .gesture-cursor {
 .swipe-hint {
   position: fixed;
   top: 50%;
-  transform: translateY(-50%);
-  z-index: 800;
+  z-index: 99999;
   padding: 12px 22px;
-  background: rgba(26, 23, 20, 0.75);
+  background: rgba(26, 23, 20, 0.85);
   backdrop-filter: blur(4px);
-  border: 1px solid rgba(200, 168, 85, 0.2);
-  border-radius: 6px;
+  border: 1px solid rgba(200, 168, 85, 0.3);
+  border-radius: 8px;
   color: var(--paper-warm);
   font-family: var(--font-body);
   font-size: 14px;
+  font-weight: 600;
   letter-spacing: 0.12em;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.25s;
+  transition: opacity 0.25s ease;
 }
 
-.swipe-hint.left  { left: 28px; }
-.swipe-hint.right { right: 28px; }
+.swipe-hint.left  { left: 28px;  transform: translateY(-50%); }
+.swipe-hint.right { right: 28px; transform: translateY(-50%); }
 
 .swipe-hint.show {
   opacity: 1;
 }
 
-/* ---- 摄像头预览小窗（固定左下角，overflow:visible 让关闭按钮不被裁剪） ---- */
+/* ---- 摄像头预览小窗 ---- */
 #camera-preview {
   position: fixed;
   bottom: 90px;
   left: 20px;
-  right: auto;
-  top: auto;
   width: 180px;
   height: 135px;
   border: 1px solid rgba(200, 168, 85, 0.35);
@@ -276,11 +308,10 @@ body.mouse-cursor-active .gesture-cursor {
   opacity: 0.4;
   transform: scaleX(-1);
   display: none;
-  /* 与左下 push-preview 重叠时让点击穿透到 × 按钮 */
   pointer-events: none;
 }
 
-/* ---- 推门预览关闭按钮（小窗右上角圆点） ---- */
+/* ---- 推门预览关闭按钮 ---- */
 .push-preview-close {
   position: absolute;
   top: -8px;

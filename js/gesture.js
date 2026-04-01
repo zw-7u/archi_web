@@ -201,7 +201,9 @@
       if (preview) preview.remove();
       pushVideoEl = null;
 
-      // closeAll() 只负责关闭硬件资源；按钮 class 由调用者（toggle）统一管理
+      // 移除手势模式类，恢复系统光标
+      document.body.classList.remove('gesture-mode');
+
       resetGestureState();
       hideCursorUI();
     }
@@ -229,29 +231,20 @@
     }
 
     // ─────────────────────────────────────────────
-    // 鼠标跟随
+    // 鼠标跟随（仅在手势模式开启时生效）
     // ─────────────────────────────────────────────
     function initMouseCursor() {
-      document.body.classList.add('mouse-cursor-active');
-      document.body.style.cursor = 'none';
+      // 不再全局隐藏光标 —— 仅在手势模式时隐藏系统光标
 
       document.addEventListener('mousemove', (e) => {
-        if (Gesture.isLandingVisible()) {
-          document.body.style.cursor = '';
-          return;
-        }
-        document.body.style.cursor = 'none';
+        if (!isActive) return;
         targetX = e.clientX;
         targetY = e.clientY;
       });
 
-      document.addEventListener('mouseenter', () => {
-        document.body.style.cursor = Gesture.isLandingVisible() ? '' : 'none';
-      });
-
       document.addEventListener('click', (e) => {
-        if (Gesture.isLandingVisible()) return;
-        // 主场景：勿对右上工具栏再 performClick，否则会二次 el.click() 导致 toggle 连点两次
+        if (!isActive) return;
+        // 工具栏按钮不拦截
         if (e.target.closest('.top-toolbar')) return;
         if (gestureClickProcessed) return;
         targetX = e.clientX;
@@ -264,9 +257,11 @@
 
     function showCursorUI() {
       document.getElementById('gesture-cursor')?.classList.add('visible');
+      document.body.classList.add('gesture-mode');
     }
 
     function hideCursorUI() {
+      document.body.classList.remove('gesture-mode');
       const c = document.getElementById('gesture-cursor');
       if (c) c.classList.remove('visible');
       clearDwellProgress();
@@ -956,7 +951,6 @@
     // 点击一次开启金色发光，点击一次关闭灰色暗淡
     // ─────────────────────────────────────────────
     async function toggle() {
-      // 先保存状态，避免 closeAll() 内部修改 isActive 后影响判断
       const currentlyActive = isActive;
 
       if (currentlyActive) {
@@ -969,6 +963,8 @@
           isActive = true;
           buildCameraPreview(cameraStream);
           document.getElementById('gesture-toggle')?.classList.add('active');
+          // 开启手势模式：隐藏系统光标，显示金色光圈
+          document.body.classList.add('gesture-mode');
           updateGestureStatus('手势控制已开启');
         } else {
           document.getElementById('gesture-toggle')?.classList.remove('active');
